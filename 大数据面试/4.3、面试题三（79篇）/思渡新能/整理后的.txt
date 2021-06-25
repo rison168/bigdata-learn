@@ -1,0 +1,358 @@
+1.1
+String类为什么是final的？？
+
+	final
+		final关键字的含义?
+			final在Java中是一个保留的关键字，可以声明类（不能被继承）、方法（不能被重写）、以及变量（不能被修改）（成员变量、本地变量（局部变量））。
+			一旦你将引用声明作final，你将不能改变这个引用了，编译器会检查代码，如果你试图将变量再次初始化的话，编译器会报编译错误
+
+			
+		什么是final类？
+			使用final来修饰的类叫作final类。
+			final类通常功能是完整的，它们不能被继承。
+			Java中有许多类是final的，譬如String, Interger以及其他包装类。
+			
+			下面是final类的实例：
+			final class PersonalLoan{
+			}
+		 
+			class CheapPersonalLoan extends PersonalLoan{  //compilation error: cannot inherit from final class
+			}
+			
+		什么是final方法?
+
+			final也可以声明方法。方法前面加上final关键字，代表这个方法不可以被子类的方法重写。
+			如果你认为一个方法的功能已经足够完整了，子类中不需要改变的话，你可以声明此方法为final。
+			final方法比非final方法要快，因为在编译的时候已经静态绑定了，不需要在运行时再动态绑定。
+			下面是final方法的例子	
+			class PersonalLoan{
+				public final String getName(){
+					return "personal loan";
+				}
+			}
+			 
+			class CheapPersonalLoan extends PersonalLoan{
+				@Override
+				public final String getName(){
+					return "cheap personal loan"; //compilation error: overridden method is final
+				}
+			}
+		什么是final变量？
+			凡是对成员变量或者本地变量(在方法中的或者代码块中的变量称为本地变量)声明为final的都叫作final变量。
+			final变量经常和static关键字一起使用，作为常量。
+			下面是final变量的例子：
+
+			public static final String LOAN = "loan";
+			LOAN = new String("loan") //invalid compilation error
+			
+			final变量是只读的。		
+		
+		
+		
+		final关键字的好处
+
+			1、final关键字提高了性能。JVM和Java应用都会缓存final变量。
+			2、final变量可以安全的在多线程环境下进行共享，而不需要额外的同步开销。
+			3、使用final关键字，JVM会对方法、变量及类进行优化。
+		
+		关于final的重要知识点
+
+			1、final关键字可以用于成员变量、本地变量、方法以及类。
+			2、final成员变量必须在声明的时候初始化或者在构造器中初始化，否则就会报编译错误。
+			3、你不能够对final变量再次赋值。
+			4、本地变量必须在声明时赋值。
+			5、在匿名类中所有变量都必须是final变量。
+			6、final方法不能被重写。
+			7、final类不能被继承。
+			8、final关键字不同于finally关键字，后者用于异常处理。
+			9、final关键字容易与finalize()方法搞混，后者是在Object类中定义的方法，是在垃圾回收之前被JVM调用的方法。
+			10、接口中声明的所有变量本身是final的。
+			11、final和abstract这两个关键字是反相关的，final类就不可能是abstract的。
+			12、final方法在编译阶段绑定，称为静态绑定(static binding)。
+			13、没有在声明时初始化final变量的称为空白final变量(blank final variable)，它们必须在构造器中初始化，或者调用this()初始化。不这么做的话，编译器会报错“final变量(变量名)需要进行初始化”。
+			14、将类、方法、变量声明为final能够提高性能，这样JVM就有机会进行估计，然后优化。
+			15、按照Java代码惯例，final变量就是常量，而且通常常量名要大写：
+				private final int COUNT = 10;
+				
+				对于集合对象声明为final指的是引用不能被更改，但是你可以向其中增加，删除或者改变内容。譬如：
+					public static void main(String[] args) {
+						final List ll = new ArrayList();
+						ll.add("home loan");  //valid
+						ll.add("personal loan"); //valid
+						ll = new Vector();  //not valid
+					}
+					
+	为什么String类是不可变的？	
+		String是所有语言中最常用的一个类。
+		我们知道在Java中，String是不可变的、final的。
+		Java在运行时也保存了一个字符串池(String pool)，这使得String成为了一个特别的类。
+	
+		String类不可变性的好处
+
+		1、只有当字符串是不可变的，字符串池才有可能实现。
+		字符串池的实现可以在运行时节约很多heap空间，因为不同的字符串变量都指向池中的同一个字符串。
+		但如果字符串是可变的，那么String interning将不能实现(译者注：String interning是指对不同的字符串仅仅只保存一个，即不会保存多个相同的字符串。)，因为这样的话，如果变量改变了它的值，那么其它指向这个值的变量的值也会一起改变。
+		2、如果字符串是可变的，那么会引起很严重的安全问题。
+		譬如，数据库的用户名、密码都是以字符串的形式传入来获得数据库的连接，或者在socket编程中，主机名和端口都是以字符串的形式传入。
+		因为字符串是不可变的，所以它的值是不可改变的，否则黑客们可以钻到空子，改变字符串指向的对象的值，造成安全漏洞。
+		3、因为字符串是不可变的，所以是多线程安全的，同一个字符串实例可以被多个线程共享。
+		这样便不用因为线程安全问题而使用同步。字符串自己便是线程安全的。
+		4、类加载器要用到字符串，不可变性提供了安全性，以便正确的类被加载。
+		譬如你想加载java.sql.Connection类，而这个值被改成了myhacked.Connection，那么会对你的数据库造成不可知的破坏。
+		5、因为字符串是不可变的，所以在它创建的时候hashcode就被缓存了，不需要重新计算。
+		这就使得字符串很适合作为Map中的键，字符串的处理速度要快过其它的键对象。
+		这就是HashMap中的键往往都使用字符串。
+	
+	
+1.2
+	HashMap
+		你知道HashMap的工作原理吗？
+		你知道HashMap的get()方法的工作原理吗？
+			HashMap是基于hashing的原理，我们使用put(key, value)存储对象到HashMap中，使用get(key)从HashMap中获取对象。
+			当我们给put()方法传递键和值时，我们先对键调用hashCode()方法，返回的hashCode用于找到bucket位置来储存Entry对象
+			HashMap是在bucket中储存键对象和值对象，作为Map.Entry
+			
+		当两个对象的hashcode相同会发生什么？ 
+			从这里开始，真正的困惑开始了，一些面试者会回答因为hashcode相同，所以两个对象是相等的，HashMap将会抛出异常，或者不会存储它们。
+			然后面试官可能会提醒他们有equals()和hashCode()两个方法，并告诉他们两个对象就算hashcode相同，但是它们可能并不相等。
+			一些面试者可能就此放弃，而另外一些还能继续挺进，他们回答“因为hashcode相同，所以它们的bucket位置相同，‘碰撞’会发生。
+			因为HashMap使用链表存储对象，这个Entry(包含有键值对的Map.Entry对象)会存储在链表中。
+			”这个答案非常的合理，虽然有很多种处理碰撞的方法，这种方法是最简单的，也正是HashMap的处理方法。
+			但故事还没有完结，面试官会继续问：
+
+		如果两个键的hashcode相同，你如何获取值对象？
+			面试者会回答：当我们调用get()方法，HashMap会使用键对象的hashcode找到bucket位置，然后获取值对象。
+			面试官提醒他如果有两个值对象储存在同一个bucket，他给出答案:将会遍历链表直到找到值对象。
+			面试官会问因为你并没有值对象去比较，你是如何确定确定找到值对象的？
+			除非面试者直到HashMap在链表中存储的是键值对，否则他们不可能回答出这一题。
+			其中一些记得这个重要知识点的面试者会说，找到bucket位置之后，会调用keys.equals()方法去找到链表中正确的节点，最终找到要找的值对象。完美的答案！
+		
+		如果HashMap的大小超过了负载因子(load factor)定义的容量，怎么办？
+			”除非你真正知道HashMap的工作原理，否则你将回答不出这道题
+			默认的负载因子大小为0.75，也就是说，当一个map填满了75%的bucket时候，和其它集合类(如ArrayList等)一样，将会创建原来HashMap大小的两倍的bucket数组，来重新调整map的大小，并将原来的对象放入新的bucket数组中。
+			这个过程叫作rehashing，因为它调用hash方法找到新的bucket位置。
+	
+		你了解重新调整HashMap大小存在什么问题吗？
+			”你可能回答不上来，这时面试官会提醒你当多线程的情况下，可能产生条件竞争(race condition)。
+			当重新调整HashMap大小的时候，确实存在条件竞争，因为如果两个线程都发现HashMap需要重新调整大小了，它们会同时试着调整大小。
+			在调整大小的过程中，存储在链表中的元素的次序会反过来，因为移动到新的bucket位置的时候，HashMap并不会将元素放在链表的尾部，而是放在头部，这是为了避免尾部遍历(tail traversing)。如果条件竞争发生了，那么就死循环了。
+			这个时候，你可以质问面试官，为什么这么奇怪，要在多线程的环境下使用HashMap呢？：）
+			
+			
+		更多的关于HashMap的问题：
+
+			1、为什么String, Interger这样的wrapper类适合作为键？ String, Interger这样的wrapper类作为HashMap的键是再适合不过了，而且String最为常用。因为String是不可变的，也是final的，而且已经重写了equals()和hashCode()方法了。其他的wrapper类也有这个特点。不可变性是必要的，因为为了要计算hashCode()，就要防止键值改变，如果键值在放入时和获取时返回不同的hashcode的话，那么就不能从HashMap中找到你想要的对象。不可变性还有其他的优点如线程安全。如果你可以仅仅通过将某个field声明成final就能保证hashCode是不变的，那么请这么做吧。因为获取对象的时候要用到equals()和hashCode()方法，那么键对象正确的重写这两个方法是非常重要的。如果两个不相等的对象返回不同的hashcode的话，那么碰撞的几率就会小些，这样就能提高HashMap的性能。
+			2、我们可以使用自定义的对象作为键吗？ 这是前一个问题的延伸。当然你可能使用任何对象作为键，只要它遵守了equals()和hashCode()方法的定义规则，并且当对象插入到Map中之后将不会再改变了。如果这个自定义对象时不可变的，那么它已经满足了作为键的条件，因为当它创建之后就已经不能改变了。
+			3、我们可以使用CocurrentHashMap来代替Hashtable吗？这是另外一个很热门的面试题，因为ConcurrentHashMap越来越多人用了。我们知道Hashtable是synchronized的，但是ConcurrentHashMap同步性能更好，因为它仅仅根据同步级别对map的一部分进行上锁。ConcurrentHashMap当然可以代替HashTable，但是HashTable提供更强的线程安全性。看看这篇博客查看Hashtable和ConcurrentHashMap的区别。	
+			
+	HashMap和Hashtable的区别
+		HashMap和Hashtable都实现了Map接口，但决定用哪一个之前先要弄清楚它们之间的分别。主要的区别有：线程安全性，同步(synchronization)，以及速度。
+
+		1、HashMap几乎可以等价于Hashtable，除了HashMap是非synchronized的，并可以接受null(HashMap可以接受为null的键值(key)和值(value)，而Hashtable则不行)。
+		2、HashMap是非synchronized，而Hashtable是synchronized，这意味着Hashtable是线程安全的，多个线程可以共享一个Hashtable；
+		而如果没有正确的同步的话，多个线程是不能共享HashMap的。
+		Java 5提供了ConcurrentHashMap，它是HashTable的替代，比HashTable的扩展性更好。
+		3、另一个区别是HashMap的迭代器(Iterator)是fail-fast迭代器，而Hashtable的enumerator迭代器不是fail-fast的。
+		所以当有其它线程改变了HashMap的结构（增加或者移除元素），将会抛出ConcurrentModificationException，但迭代器本身的remove()方法移除元素则不会抛出ConcurrentModificationException异常。
+		但这并不是一个一定发生的行为，要看JVM。
+		这条同样也是Enumeration和Iterator的区别。
+		4、由于Hashtable是线程安全的也是synchronized，所以在单线程环境下它比HashMap要慢。
+		如果你不需要同步，只需要单一线程，那么使用HashMap性能要好过Hashtable。
+		5、HashMap不能保证随着时间的推移Map中的元素次序是不变的。
+
+	要注意的一些重要术语：
+
+	1) sychronized意味着在一次仅有一个线程能够更改Hashtable。就是说任何线程要更新Hashtable时要首先获得同步锁，其它线程要等到同步锁被释放之后才能再次获得同步锁更新Hashtable。
+
+	2) Fail-safe和iterator迭代器相关。如果某个集合对象创建了Iterator或者ListIterator，然后其它的线程试图“结构上”更改集合对象，将会抛出ConcurrentModificationException异常。但其它线程可以通过set()方法更改集合对象是允许的，因为这并没有从“结构上”更改集合。但是假如已经从结构上进行了更改，再调用set()方法，将会抛出IllegalArgumentException异常。
+
+	3) 结构上的更改指的是删除或者插入一个元素，这样会影响到map的结构。
+
+	我们能否让HashMap同步？
+
+	HashMap可以通过下面的语句进行同步：
+	Map m = Collections.synchronizeMap(hashMap);
+
+	结论
+
+	Hashtable和HashMap有几个主要的不同：线程安全以及速度。
+	仅在你需要完全的线程安全的时候使用Hashtable，而如果你使用Java 5或以上的话，请使用ConcurrentHashMap吧。
+
+1.3
+	java反射中,Class.forName和classloader的区别？
+	
+	Class.forName和ClassLoader.loadClass区别？
+	https://www.cnblogs.com/zabulon/p/5826610.html
+	https://blog.csdn.net/zhengbo0/article/details/39479053
+	
+	Java中class是如何加载到JVM中的：
+		1.class加载到JVM中有三个步骤
+			装载：（loading）找到class对应的字节码文件。
+			连接：（linking）将对应的字节码文件读入到JVM中。
+			初始化：（initializing）对class做相应的初始化动作。
+		2.Java中两种加载class到JVM中的方式
+			2.1：Class.forName("className");
+				其实这种方法调运的是：Class.forName(className, true, ClassLoader.getCallerClassLoader())方法
+				参数一：className，需要加载的类的名称。
+				参数二：true，是否对class进行初始化（需要initialize）
+				参数三：classLoader，对应的类加载器
+
+			2.2：ClassLoader.laodClass("className");
+				其实这种方法调运的是：ClassLoader.loadClass(name, false)方法
+				参数一：name,需要加载的类的名称
+				参数二：false，这个类加载以后是否需要去连接（不需要linking）
+				
+			2.3:两种方式的区别
+				forName("")得到的class是已经初始化完成的
+				loadClass("")得到的class是还没有连接的
+				一般情况下，这两个方法效果一样，都能装载Class。
+				但如果程序依赖于Class是否被初始化，就必须用Class.forName(name)了。
+
+		3.举例说明他们各自的使用方法
+			java使用JDBC连接数据库时候，我们首先需要加载数据库驱动。
+			JDBC  Driver源码如下,因此使用Class.forName(classname)才能在反射回去类的时候执行static块。
+				Class.forName("com.mysql.jdbc.Driver");//通过这种方式将驱动注册到驱动管理器上
+				Connection conn = DriverManager.getConnection("url","userName","password");//通过驱动管理器获得相应的连接
+				查看com.mysql.jdbc.Driver源码：
+			
+				
+			public class Driver extends NonRegisteringDriver implements java.sql.Driver {
+				//注意，这里有一个static的代码块，这个代码块将会在class初始化的时候执行
+				static {
+					try {
+						//将这个驱动Driver注册到驱动管理器上
+					  DriverManager.registerDriver(new Driver());
+					} catch (SQLException E) {
+					  throw new RuntimeException("Can't register driver!");
+					}
+				}
+			}
+
+			Class.forName("com.mysql.jdbc.Driver")方法以后，他会进行class的初始化，执行static代码块。
+				也就是说class初始化以后，就会将驱注册到DriverManageer上，之后才能通过DriverManager去获取相应的连接。
+				但是要是我们使用ClassLoader.loadClass(com.mysql.jdbc.Driver)的话，不会link，更也不会初始化class。
+				相应的就不会回将Driver注册到DriverManager上面，所以肯定不能通过DriverManager获取相应的连接。
+
+1.4
+	java 的内存模型及GC算法
+		JVM
+			内存
+			执行引擎
+			类加载
+			GC
+				GC算法 垃圾回收
+				GC分析 命令调优
+
+
+
+	https://blog.csdn.net/wuqinghai2012/article/details/51485414
+
+
+
+1.5、
+	java7和java8新特性
+	
+	Java7:
+		1switch中可以使用字串
+		2运用List<String> tempList = new ArrayList<>(); 即泛型实例化类型自动推断
+		3新增一些取环境信息的工具方法
+			File System.getJavaIoTempDir() // IO临时文件夹  
+			File System.getJavaHomeDir() // JRE的安装目录  
+			File System.getUserHomeDir() // 当前用户目录  
+			File System.getUserDir() // 启动java进程时所在的目录5 
+
+		4Boolean类型反转，空指针安全,参与位运算
+		
+		5两个char间的equals 
+			boolean Character.equalsIgnoreCase(char ch1, char ch2)
+		6安全的加减乘除
+			int Math.safeToInt(long value)  
+			int Math.safeNegate(int value)  
+			long Math.safeSubtract(long value1, int value2)  
+			long Math.safeSubtract(long value1, long value2)  
+			int Math.safeMultiply(int value1, int value2)  
+			long Math.safeMultiply(long value1, int value2)  
+			long Math.safeMultiply(long value1, long value2)  
+			long Math.safeNegate(long value)  
+			int Math.safeAdd(int value1, int value2)  
+			long Math.safeAdd(long value1, int value2)  
+			long Math.safeAdd(long value1, long value2)  
+			int Math.safeSubtract(int value1, int value2)  
+		7map集合支持并发请求，且可以写成 Map map = {name:"xxx",age:18};
+		
+
+	Java 8
+		java8的新特新逐一列出，并将使用简单的代码示例来指导你如何使用默认接口方法，lambda表达式，方法引用以及多重Annotation，之后你将会学到最新的API上的改进，比如流，函数式接口，Map以及全新的日期API
+		一、接口的默认方法
+		Java 8允许我们给接口添加一个非抽象的方法实现，只需要使用 default关键字即可，这个特征又叫做扩展方法，示例如下：
+		二、Lambda 表达式
+		三、函数式接口
+		四、方法与构造函数引用
+			前一节中的代码还可以通过静态方法引用来表示：
+			Converter<String, Integer> converter = Integer::valueOf;  
+			Integer converted = converter.convert("123");  
+			System.out.println(converted);   // 123  
+			java 8 允许你使用 :: 关键字来传递方法或者构造函数引用，上面的代码展示了如何引用一个静态方法，我们也可以引用一个对象的方法：
+			converter = something::startsWith;  
+			String converted = converter.convert("Java");  
+			System.out.println(converted);    // "J"  
+		五、Lambda 作用域
+		六、访问局部变量
+		七、访问对象字段与静态变量
+		和本地变量不同的是，lambda内部对于实例的字段以及静态变量是即可读又可写。该行为和匿名对象是一致的：
+		[java] view plain copy
+		class Lambda4 {  
+			static int outerStaticNum;  
+			int outerNum;    
+			 void testScopes() {  
+				Converter<Integer, String> stringConverter1 = (from) -> {  
+					outerNum = 23;  
+					return String.valueOf(from);  
+				};   
+				 Converter<Integer, String> stringConverter2 = (from) -> {  
+					outerStaticNum = 72;  
+					return String.valueOf(from);  
+				};  
+			}  
+		}   
+		八、访问接口的默认方法
+		还记得第一节中的formula例子么，接口Formula定义了一个默认方法sqrt可以直接被formula的实例包括匿名对象访问到，但是在lambda表达式中这个是不行的。
+		Lambda表达式中是无法访问到默认方法的，以下代码将无法编译：
+		Formula formula = (a) -> sqrt( a * 100);  
+		Built-in Functional Interfaces  
+		JDK 1.8 API包含了很多内建的函数式接口，在老Java中常用到的比如Comparator或者Runnable接口，这些接口都增加了@FunctionalInterface注解以便能用在lambda上。
+		Java 8 API同样还提供了很多全新的函数式接口来让工作更加方便，有一些接口是来自Google Guava库里的，即便你对这些很熟悉了，还是有必要看看这些是如何扩展到lambda上使用的。
+		九、Date API
+		Java 8 在包java.time下包含了一组全新的时间日期API。新的日期API和开源的Joda-Time库差不多，但又不完全一样，下面的例子展示了这组新API里最重要的一些部分：
+		十、Annotation 注解
+		在Java 8中支持多重注解了，先看个例子来理解一下是什么意思。
+		首先定义一个包装类Hints注解用来放置一组具体的Hint注解：
+		[java] view plain copy
+		@interface Hints {  
+			Hint[] value();  
+		}    
+		 @Repeatable(Hints.class)  
+		@interface Hint {  
+			String value();  
+		}   
+1.6
+	Java 数组和链表的区别以及使用场景
+		数组：是将元素在内存中连续存储的；
+			它的优点：因为数据是连续存储的，内存地址连续，所以在查找数据的时候效率比较高；
+			它的缺点：在存储之前，我们需要申请一块连续的内存空间，并且在编译的时候就必须确定好它的空间的大小。在运行的时候空间的大小是无法随着你的需要进行增加和减少而改变的，当数据两比较大的时候，有可能会出现越界的情况，数据比较小的时候，又有可能会浪费掉内存空间。在改变数据个数时，增加、插入、删除数据效率比较低。
+
+		链表：是动态申请内存空间，不需要像数组需要提前申请好内存的大小，链表只需在用的时候申请就可以，根据需要来动态申请或者删除内存空间，对于数据增加和删除以及插入比数组灵活。
+		还有就是链表中数据在内存中可以在任意的位置，通过应用来关联数据（就是通过存在元素的指针来联系）。
+
+		数组和链表就拿增加数据来说，数组中增加一个元素，需要移动大量的元素，在内存中空出一个元素的空间，然后将增加的元素放到空出的空间中；而链表就是将链表中最后的一个元素的指针指向新增的元素，在指出新增元素是尾元素就好了。
+
+		数组应用场景：
+			1、数据比较少；
+			2、经常做的运算是按序号访问数据元素；
+			3、数组更容易实现，任何高级语言都支持；
+			4、构建的线性表较稳定。
+		
+		链表应用场景：
+			1、对线性表的长度或者规模难以估计
+			2、可以频繁做插入删除操作；
+			3、构建动态性比较强的线性表。

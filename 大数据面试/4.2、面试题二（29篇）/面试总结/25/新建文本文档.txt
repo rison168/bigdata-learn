@@ -1,0 +1,25 @@
+选择题：
+1A  2D 3B 4A 5D 6A 7D 8A 9C 10A
+
+
+简答题：
+1：SecondaryNameNode的作用是：协助NameNode对editlog和fsimage进行合并，形成新的fsimage，并推送给NameNode，合并之前，先创建一个新的editLog，
+
+问答题：
+3、因为Yarn的常服务只有ResourceManager和NodeManager，Container由ApplicationMaster向ResourceManager申请的，由ResouceManager中的资源调度器异步分配给ApplicationMaster，封装了某个节点的一定量资源（CPU、内存）,是yarn提出的一种概念，当任务执行完之后，即会释放该部分资源。
+
+简答6：计算是以partition作为单位的；调用内部的compute计算函数来计算一个分区的数据
+
+
+
+
+
+
+
+
+
+
+
+
+
+

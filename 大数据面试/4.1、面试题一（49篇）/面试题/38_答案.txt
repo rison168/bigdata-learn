@@ -1,0 +1,145 @@
+2017-7-8日，2017年7月8日 星期五----14道hadoop的面试题
+1：
+步骤：
+前期需要设计集群的搭建架构，配置文件根据相应的设计配置
+（1）：创建hadoop用户
+（2）：setup.修改IP
+（3）：选择稳定性且兼容性很好的1.7版本的jdk，安装jdk，配置java的环境变量，记得source一把使其立即生效
+（4）：修改host文件域名和ip的映射关系
+（5）：安装SSH，配置免密钥登陆
+（6）：选择稳定且兼容性最好的hadoop2.5版本，下载，上传，解压
+（7）：配置Hadoop环境变量，记得source一把使其生效
+（8）：配置conf下面的配置文件：hadoop-env.sh,core-site.xml,mapred-site.xml,hdfs-site.xml，yarn-site.xml,slaves
+ (9):  格式化namenode：hdfs dfs namendoe -format
+ (10): 启动集群：start-all.sh
+ (11):jps查看进程启动没有（最好看一下logs日志文件），hadoop web查看50070（默认-如修改使用修改的）和8088（默认-如修改使用修改的）端口启动没有
+
+2：hdfs:
+	hdfs非ha:
+	    namenode:管理集群的元数据信息
+	    secondarynamenode：合并namenode的元数据信息fsimage和edis日志文件，能起到部分的备份作用
+	    datanode:存储block数据块
+        hdfs ha：
+	    namenode集群：管理整个hadoop集群的元数据-主从备份
+	    journalnode集群：实时接收并存储namenode上传的元数据
+            zookeeper集群：负责选举和协调namenode集群
+            zkfc：切换主从activenamenode和standbynamenode
+	    datanode集群：存储
+	yarn：
+	    resourceManager：负责集群的资源管理
+	    nodeManager：负责管理applicationMaster
+
+3：可能的原因：hdfs没有启动起来，jps查看一下进程，并且去查看namenode的日志文件查看详细的错误信息
+	       确认配置文件
+4：杀死一个job：
+   hadoop job -list 拿到job-id    hadoop job -kill job-id
+  删除hdfs的/tmp/data:
+  hdfs dfs -rmr /tmp/data
+  加入一个新的存储结点或者和删除一个计算结点需要刷新集群的状态命令：
+  hadoop-daemon.sh start datanode
+  hadoop-daemon.sh start tasktracker
+  datanode的添加分为静态添加和动态的添加：
+  静态的添加：停止namenode，修改slaves文件，更新到各个节点，启动namenode
+  动态的添加：修改slaves文件并且更新到各个节点，启动datanode：hadoop-daemon.sh start datanode ,web界面查看datanode更新
+
+
+5:hadoop支持三种调度器
+先进先出的调度器：最早的hadoop采用的是FIFO（默认-先进先出的）调度器调度用户提交的作业。作业按照提交的顺序被调度，作业必须等待轮询到自己才能运行。
+但是考虑到公平在多用户之间分配资源，设置了作业的优先级功能，但是不支持抢占式的。
+公平调度器：公平调度器的目标是让每一个用户公平的共享集群能力，充分的利用闲置的任务槽，采用“让用户公平的共享集群”的方式分配资源
+作业放在作业池之中，每个用户拥有自己的作业池。提交的作业越多并不会因此获得更多的资源，公平调度器支持抢占式的机制，一个作业池中若没有公平的共享资源，则会将多余的资源空出来
+容量调度器：集群中很多的队列组成的，这些队列具有一定的层次结构，每个队列都有一定的容量。每个队列的内部支持FIIFO方式。本质上容量调度器允许用户或则组织模拟出一个使用FIFO调度策略的独立MApReduce集群
+
+6：java，python，hive-HiveQL
+
+7：
+a,b,c,d
+b,b,f,e
+a,a,c,f
+java-统计第四列的元素出现的个数
+思路：splite(文本)------inputformat(<index,line>)-----map(split(",")--<char,IntWritable(1)>)-----shuffle(<char,list<1,1,1...>>)-----reduce(将values的list遍历取出每一个统计，取出4的倍数的key的char作为key输出，其累计的list作为value输出)
+如何确定第四列的char：在map输出的时候加标识，reduce取key的时候，根据标识确认	
+
+8：编写mapreduce的方式：
+java编写-常用
+Hadoop Streaming：使用unix标准的输入和输出流作为hadooop和应用程序之间的接口，支持像Ruby，python等不同的编程语言编写map和reduce
+Hadoop Pipes是hadoop提供的C++的接口的名称	
+优缺点：
+java:Hadoop支持的最好最全面的语言，而且提供了很多工具方便程序员开发。
+Hadoop Streaming：它最大的优点是支持多种语言，但效率较低，reduce task需等到map 阶段完成后才能启动；它不支持用户自定义InputFormat，如果用户想指定输入文件格式，可使用java语言编写或者在命令行中指定分隔符；它采用标准输入输出让C/C++与java通信，因而只支持text数据格式。
+Hadoop Pipes:专门为C/C++语言设计，由于其采用了socket方式让C/C++与java通信，因而其效率较低（其优势在于，但作业需要大量，速度很快）。它支持用户（用C/C++）编写RecordReader。
+Pydoop:它是专门方便python程序员编写MapReduce作业设计的，其底层使用了Hadoop Streaming接口和libhdfs库。	
+
+9:hive保存元数据的方式有三种：
+1：自带的内存数据库Derby方式保存，只支持单个会话，挺小，不常用
+2：本地mysql：常用本地调用
+3：Remote远程mysql方式：远程调用
+
+10：hadoop二级排序：
+hadoop默认的是对key进行排序，如果想要再对value进行排序，那么就要使用：二级排序
+二级排序的方式：
+ 1：将reduce接收到的value-list的值缓存，然后做reduce内排序，再写出，这样排序速度快一些，由于value-list的数据可能很庞大，可能会造成内存的溢出
+ 2：将值的一部分或则整个部分加入key，生成一个合并的可以。生成组合key的过程很简单。我们需要先分析一下，在排序时需要把值的哪些部分考虑在内，然后，把它们加进key里去。随后，再修改key类的compareTo方法或是Comparator类，确保排序的时候使用这个组合而成的key。
+
+11：hadoop常用的join:详细参考：http://dongxicheng.org/mapreduce/hadoop-join-two-tables/
+
+ 1：reduce side join:最简单的方式，原理是：map将来自file1和file2的数据做标记，reduce获取key相同的来自file1和file2的value-list，对于同一个key，对file1和file2中的数据做笛卡儿积
+    reduce的端做的就是实际的连接操作
+    reduce side join的效率非常的低，因为shuffle阶段要进行大量的数据传输
+ 2：map side join:场景是一张非常大的表和一张非常小的表的连接。小表可以直接的放到内存中，然每一个map task的内存中存一份小表（存到hash table中），然后只扫描大表，将大表中的每一个key value和去hashtable中查找看是否有相同的key记录，如果有，直接输出即可
+    支持文件的复制的hadoop类：DistributedCache
+ 3：semijoin：半连接，，对于reduce side join，跨机器的数据传输量非常大，这成了join操作的一个瓶颈。过滤掉不会参加reduce join的数据，大大的节省IO
+    原理：将参与join的表的key抽取出来单独的放在一个文件file当中，然后复制到各个taskTracker上的内存中，然后将大文件的不在file中的key过滤掉。然后后面的操作同reduce side join
+ 4：reduce side join+BloomFilter:SemiJoin抽取出来的小表的key集合在内存中仍然存放不下，这时候可以使用BloomFiler以节省空间
+
+11：java二分查找（非递归）：取中值，比较和上一次的首尾，取下一次的中值。跳出条件是1
+
+13：combiner的功能其实和reduce的功能是一样的，但是它一般用于优化，但是不是什么场景都可以使用combiner,一般在累计和求最大值等场景会用。它是在map的输出的结果分区，排序后对相同的key的value的累加。以达到减少传输数据的量，从而减少IO。当溢写的文件大于3的时候会触发combiner，将多个文件合并
+    partition的功能是将具有相同的key的value值交由相同的reduce处理，有多少个分区就会有多少个reduce，一般默认的分区的规则是hash（key）mod reduce，分区的会造成数据倾斜，需要特别的注意
+
+14：使用hadoop Streaming的方式处理海量数据的文本文件？shell脚本编写mapreduce
+
+15：hive的内部表和外部表的區別是hive的内部表是由hive自己管理的，外部表只是管理元数据，当删除数据的时候，内部表会连数据和元数据全部删除，而外部表则只会删除元数据，数据依然存放在hdfs中。
+    外部表相对来说更加的安全一些，数据的组织也更加的灵活一些，方便共享源数据
+
+16：
+
+17：mapreduce数据倾斜造成原因是：
+    mapreduce默认是对相同的key由一个reduce执行，而reduce是由partition的个数来决定的。hadoop的源码中的默认的partition是hash（key）mod R来分区的。当某个key的数据量明显的大于其他的key的数据量的数据，会造成某个reduce处理的数据量大于其他的reduce，相应的执行这个reduce的时间就会长于其他的reduce
+    而mapreduc作业的完成取决于最后一个reduce的完成。这样就会造成mapreduce作业时间长。
+    造成数据倾斜的根本的原因就是：key的分布不均匀，部分key过于集中，partition后造成数据倾斜
+    解决mapreduce数据倾斜问题的方法：
+    详细参考博客：http://www.aboutyun.com/thread-15544-1-1.html
+                  http://blog.csdn.net/core_cto/article/details/8644692
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

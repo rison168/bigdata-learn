@@ -1,0 +1,205 @@
+i = 1
+sum = 0
+while i <= 100:
+    sum = sum + i
+    i += 1
+print ("1~100的和为：%d") %sum
+
+
+
+
+
+
+
+
+
+
+15：导入HBASE的依赖包，创建HBASE的相关对象如：HBaseConfiguration，htable
+
+
+
+
+
+
+14:create 't2', 'cf', SPLITS_FILE => '/home/hadoop/splitfile.txt'
+
+
+
+
+13:a)内嵌Derby方式 
+b)Local方式
+ c)Remote方式
+
+ 
+ 
+ 
+ 
+ 
+12:hadoop集群中主要进程
+master:   NameNode, ResourceManager,
+slaves:   DataNode, NodeManager,  RunJar, MRAppMaster,YarnChild
+
+其中 RunJar, MRAppMaster,YarnChild与随着某个job的创建而创建，随着job的完成而终止。它们的作用分别是：
+RunJar：完成job的初始化，包括获取jobID，将jar包上传至hdfs等。
+MRAppMaster：每个job一个进程，主要跟踪job的运行情况，向RM申请资源等。
+YarnChild：运行具体的map/reduce task。
+
+
+
+
+
+
+11:　1、先进先出调度器（FIFO）FIFO 是 Hadoop 中默认的调度器，也是一种批处理调度器。它先按照作业的优先级高低，再按照到达时间的先后选择被执行的作业
+2、 容量调度器（Capacity Scheduler）
+　　支持多个队列，每个队列可配置一定的资源量，每个队列采用FIFO调度策略，为了防止同一个用户的作业独占队列中的资源，该调度器会对同一用户提交的作业所占资源量进行限定。调度时，首先按以下策略选择一个合适队列：计算每个队列中正在运行的任务数与其应该分得的计算资源之间的比值，选择一个该比值最小的队列；然后按以下策略选择该队列中一个作业：按照作业优先级和提交时间顺序选择，同时考虑用户资源量限制和内存限制。
+3、公平调度器（Fair Scheduler）
+　　同计算能力调度器类似，支持多队列多用户，每个队列中的资源量可以配置，同一队列中的作业公平共享队列中所有资源。
+
+
+
+
+
+
+
+一、要控制 Mapper任务的数量
+Mapper数据过大的话，会产生大量的小文件，由于Mapper是基于虚拟机的，过多的Mapper创建和 初始化及关闭虚拟机都会消耗大量的硬件资源；Mapper数太小，并发度过小，Job执行时间过长，无法充分利用分布式硬件资源
+Mapper任务数量是由   输入文件的大小,  输入文件的数量, 配置参数决定的, 所以我们可以通过设置 block块的大小 和 使用合并器 来控制mapper任务的数量
+设置合并器 :(set 都是在 hive脚本,也可以配置 hadoop)
+set hive.input.format=org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;
+set hive.merge.mapFiles=true;
+set hive.merge.mapredFiles=true;
+set hive.merge.size.per.task=256000000;//每个Mapper要处理的数据，就把上面的5M10M……合并成为一个
+ 
+一般还要配合一个参数：
+  set mapred.max.split.size=256000000 // mapred切分的大小
+  set mapred.min.split.size.per.node=128000000//低于128M就算小文件，数据在一个节点会合并，在多个不同的节点会把数据抓过来进行合并。
+Hadoop中的参数：可以通过控制文件的数量控制mapper数量
+    mapreduce.input.fileinputformat.split.minsize（default：0），小于这个值会合并
+    mapreduce.input.fileinputformat.split.maxsize 大于这个值会切分
+ 
+二、处理数据的时候
+Partition说明:  partition值默认是通过计算key的hash值后对Reduce task的数量取模获得
+有的时候我们需要自定义  partitioner
+1) 每一个reduce 的输出都是有序的, 但是将所有的reduce的输出合并到一起却并非是全局有序的,如果要全局有序,最好就是自定义一个partitioner, 用输入数据的最大值除以系统reduce task数量的商为分隔边界,就可以保证全局有序.
+2) 解决数据倾斜: 有的时候每个reduce task处理的键值对数量极不平衡,比如说对于某些数据集，由于很多不同的key的hash值都一样，导致这些key被分给同一个reducer处理，导致数据倾斜，这时候我们也可以自定义分区器，
+3) 还有一种情况需要自定义分区器：自定义的key包含了很多字段，但是要根据第一个字段进行分发数据，其余的字段用作二次排序用
+ 
+环形缓冲区：
+这个buffer环就是一个字节数组，叫kvbuffer，每个map任务不断的将键值对输入到这个buffer环中，当输入的数据达到了buffer环的80%的时候，开始向磁盘中溢写。这个时候，map任务向buffer环剩下的20%中写数据，直到再次达到buffer环的80%。
+这个比例可以通过mapreduce.map.sort.spill.percent（default：0.80）进行调整，
+buffer环的大小默认是100M，可以通过mapreduce.task.io.sort.mb（default：100）参数来调整
+ 
+Merge：
+Maptask在计算的时候会产生很多的spill文件，在maptask任务结束之前会对这些spill文件进行合并，这个过程就是merge，默认同时最多merge  10 个spill文件，我们可以增大它mapreduce.task.io.sort.factor，以此减少merge的次数，减少磁盘IO。
+ 
+Combiner
+Combiner存在的时候，会根据combiner定义的函数对map的结果进行合并，
+min.num.spill.for.combine的参数决定的，默认是3，也就是说spill的文件数在默认情况下由三个的时候就要进行combine操作，最终减少磁盘数据。
+一个combiner只是处理一个结点中的的输出，而不能享受像reduce一样的输入（经过了shuffle阶段的数据）
+Eg：
+词频统计是一个可以展示Combiner的用处的基础例子，比如同一个文档内出现了3次（”cat”，1），这些键值对会被送到Reducer那里。通过使用Combiner，这些键值对可以被压缩为一个送往Reducer的键值对（”cat”，3）
+ 
+减少网络IO 
+除了使用combiner还可以使用压缩  
+mapreduce.map.output.compress（default：false）设置为true进行压缩，数据会被压缩写入磁
+
+三、Shuffle和reduce阶段
+Shuffle：
+如果Shuffle的时候，如果map中间结果所在机器发生错误，或者中间结果文件丢失，或者网络瞬断等情况下，reduce的下载就有可能失败，当一定时间之后仍然失败，那么下载线程就会放弃这次下载。
+mapreduce.reduce.shuffle.read.timeout（default180000秒）
+如果公司的集群环境网络本身就是瓶颈的话，调大这个参数可以有效的避免reduce的下载线程被误判失败
+Reduce：
+Reduce在计算的时候是要消耗内存的，而在读取reduce需要的数据的时候，也同样需要内存，但是系统默认为0，也就是全部从磁盘中读取数据。如果reduce的计算逻辑消耗的内存比较少的话，可以分一部分内存用来缓存数据，可以提升速度，这样就有些类属于 spark cache的感觉了。
+mapreduce.reduce.input.buffer.percent（default 0.0）
+ 
+reducer的最优个数与集群中可用的reducer的任务槽数相关，一般设置比总槽数稍微少一些的reducer数量；hadoop文档中推荐了两个公式：
+0.95*NUMBER_OF_NODES*mapred.tasktracker.reduce.tasks.maximum
+1.75*NUMBER_OF_NODES*mapred.tasktracker.reduce.tasks.maximum
+备注：NUMBER_OF_NODES是集群中的计算节点个数；
+mapred.tasktracker.reduce.tasks.maximum：每个节点所分配的reducer任务槽的个数；
+3，在代码中通过：JobConf.setNumReduceTasks(Int numOfReduceTasks)方法设置reducer的个数；
+ 
+四、性能调优
+一个通用原则是，在满足map和reduce来运行业务逻辑的情况下，尽量给Shuffle过程多分配内存
+容器内存大小mapreduce.map.memory.mb和mapreduce.reduce.memory.mb来设置，默认都是1024M。
+Map优化
+在map端尽量减少写入spill文件，1个spill文件最好
+
+
+
+ 
+Reduce优化
+如果reduce的计算逻辑消耗的内存比较少的话，可以分一部分内存用来缓存数据
+
+ 
+通用优化
+Hadoop默认使用4KB作为缓冲，这个算是很小的，可以通过io.file.buffer.size来调高缓冲池大小。
+
+
+
+
+
+
+
+
+
+
+
+12. Hive优化
+核心思想就是把 hive sql 当做mapreduce来优化
+1. 有的时候用一些不会转化为 mapreduce任务的查询
+Select 仅查询本表字段
+Where 仅对本表字段做条件过滤
+工作的时候要多总结, 经常用   explain  来显示执行计划    explain  query
+2. 开启并行计算模式
+Set hive.exec.parallel = true
+一个计算中允许最大并行计算的job的数目
+Set hive.exec.parallel.thread.num
+ 
+ 
+ 
+join
+小表join大表，原因是在join操作的reduce阶段（不是map阶段），位于join左边的表的内容会被部分加载进内存，如果数据量比较少，就是全部加载到内存。将条目少的表放在左边，可以有效减少发生内存溢出的几率。
+多个表关联时，最多分拆成小段，避免大sql（无法控制中间job）
+ 
+大表join小表
+访户未登录时，日志中userid是空，在用user_id进行hash分桶时，会将日志中userid为空的数据分到一起，导致了过大空key造成倾斜。
+解决办法：
+由于相同的key只会分发到一个reduce去处理，所以就可以把空值的key变成一个字符串加上一个随机数，把倾斜的数据分到不同的reduce商，由于null值关联不上，处理后并不影响最终结果。
+ 
+Hive优化
+使用mapjoin
+Map-side 聚合   set hive.map.aggr = true
+使用group by 产生数据倾斜的时候的时候可以开启:  set hive.groupby.skewindata 默认false
+控制map和reduce任务的数量
+Map:
+Mapred.max.split.size 一个split的最大值，即每个map处理文件的最大值
+Mapred.min.split.size.per.node 一个节点上split的最小值
+Mapred.min.split.size.per.rack 一个机架上split的最小值 
+Reduce:
+Mapred.reduce.tasks 强制指定reduce任务的数量
+Hive.exec.reducers.bytes.per.reducer 每个reduce任务处理的数据量
+Hive.exec.reducer.max 每个任务最大的reduce数
+ 
+Hive-JVM重用
+当小文件过多,task个数过多  可以  set mapred.job.reuse.jvm.num.tasks=n  设置task插槽个数
+ 
+ 
+
+
+
+
+
+
+Hive的严格模式: set hive.mapred.mode=strict;  默认非严格
+1. 对于分区表,必须添加where对于分区字段的条件过滤
+2. Order by 语句必须包含limit输出限制
+3. 限制执行笛卡尔积的查询
+ 
+hive排序优化:
+Order by :  对结果进行全局排序,只允许有一个reduce进行处理,(当数据量较大的时候,慎用)
+Sort by:    对于单个reduce的数据进行排序
+Distribute by- 分区排序,经常和sort by 结合使用
+Cluster by -    相当于 sort by + distribute by
+( cluster by 不能荣国 asc desc的方式执行排序规则; 
+可通过distribute by column sort by column asc|desc 的方式)

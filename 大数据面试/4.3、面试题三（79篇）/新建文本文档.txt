@@ -1,0 +1,237 @@
+kafka避免重复读以及数据丢失？你都怎么处理的？
+
+
+
+hivesql清洗时常用到哪些函数
+
+
+如果job中有多次shuffle，那么每个shuffle之前都是一个stage. 会根据RDD之间的依赖关系将DAG图划分为不同的阶段，对于窄依赖，由于partition依赖关系的确定性，partition的转换处理就可以在同一个线程里完成，窄依赖就被spark划分到同一个stage中，而对于宽依赖，只能等父RDD shuffle处理完成后，下一个stage才能开始接下来的计算。
+之所以称之为ShuffleMapTask是因为它需要将自己的计算结果通过shuffle到下一个stage中 
+
+
+pipline在哪里形成?
+
+你了解spark的原理么？
+
+spark streaming如何读不同分区的数据
+
+hbase存什么数据  hbase表结构画一下
+
+还有hive函数  找最近一个月用户的第一笔订单(这个记不清了)
+
+我貌似被问到过  接着就会问  怎么修改task并行度
+
+
+
+
+spark面试题 1、SDD,DAG,Stage怎么理解?
+2、宽依赖 窄依赖怎么理解?
+3、Stage是基于什么原理分割task的?
+4、血统的概念
+5、任务的概念
+6、容错方法
+7、粗粒度和细粒度
+8、Spark优越性
+9、Spark为什么快
+10、Transformation和action是什么?区别?举几个常用方法
+11、SDD怎么理解
+12、spark 作业提交流程是怎么样的，client和 cluster 有什么区别，各有什么作用
+13、spark on yarn 作业执行流程，yarn-client 和 yarn cluster 有什么区别
+14、spark streamning 工作流程是怎么样的，和 storm 比有什么区别
+15、spark sql 你使用过没有，在哪个项目里面使用的
+16、spark 机器学习和 spark 图计算接触过没，，能举例说明你用它做过什么吗?
+17、spark sdd 是怎么容错的，基本原理是什么?
+
+
+
+
+
+
+
+HashMap什么情况下发生死链？
+
+
+HashSet是如何通过hashMap来实现的？
+
+
+如何解决变量的可见性？
+
+
+索引是怎么实现的？
+
+
+
+数据仓库的理解?
+1、数仓:olap，非实时数据；
+    普通rdbms:实时交互
+
+2、数仓里面有原始表和维度表，维度表可以使用拉链表的方式来实现
+
+
+
+kafka的消费者可以分组是吧
+
+
+如何让spark读取指定Kafka分区的数据
+
+一个maptask出多少个文件
+
+
+分组去topN？？？
+SELECT id,学科,分数 
+FROM (
+	SELECT id,学科,分数, row_number() over (PARTITION BY id OREDER BY 分数 DESC ) as flag WHERE flag<=10
+); 
+
+
+层次查询
+select key_id, key_name, key_code, key_desc, key_parent_id 
+from bas_config_key d 
+start with key_code = 'ZYFL' and key_status = 1 connect by key_parent_id = prior key_id
+
+
+
+并行度 并发
+一台计算机有10个核，一个核执行5个任务
+那这10个核就是并行度，5个任务就是并发
+
+
+Shuffer   Sparkstreaming数据丢失问题????????????
+
+
+
+还问了一个我到现在还楞比的问题   Spark读mysql中的数据，读到一个分区中，数据量大，分区满了怎么解决，我都没听懂啥意思???
+
+
+
+问我hdfs存储文件的类型，怎么使用???
+
+
+
+@海淀一哥陈禹豪?堆外内存是在两个节点之间传输数据时使用的，这里底层在spark1.6之后就是用了Netty通讯和零拷贝。
+比如map task在A节点,reduce在B节点这时就用到了堆外内存，map task所运行的executor内存(堆内+堆外)不足，导致executor 挂掉了，executor里面的BlockManager就挂掉了，导致ConnectionManager不能用，也就无法建立连接，从而不能拉取数据。
+这里就任务失败了，会报shuffle file cannot find ---Taskscheduler不负责重试。
+聚合内存是占用的堆内内存 详情请参考 静态和统一内存管理
+
+
+
+
+有一个用户流水表：表中有用户id、时间两个字段，每个用户有多条记录；
+还有一个用户信息表，里面是用户的基本信息；
+需求：求用户流水表中，时间间隔2天的用户信息；
+怎么求？？？各位大佬，给支支招
+
+
+
+1.50亿个url，，每个64b，也就是一共大约320G，两个320G的文件进行比较，找重复行，内存限制是4G，也就是说大约可以分80个分区，将a文件和b文件每行url进行hash之后，跟80取模，会将a和b文件各自分成80个小文件，然后将a文件的0号分区读入内存，然后b文件0号分区每次读取一行找与a文件0号分区中hash值相同的，然后再将url取出之后比较url是否相同，相同就放到结果文件中，循环往复上述过程。
+
+
+
+
+
+就是，有个id,有个时间，都是浏览的记录，怎么按30分钟去划分session，
+动态分区
+
+
+
+
+
+
+今天有人问我mysql的分析函数，有用过的吗
+
+一、Oracle分析函数入门
+分析函数是什么？
+分析函数是Oracle专门用于解决复杂报表统计需求的功能强大的函数，它可以在数据中进行分组然后计算基于组的某种统计值，并且每一组的每一行都可以返回一个统计值。
+
+          
+
+分析函数和聚合函数的不同之处是什么？
+普通的聚合函数用group by分组，每个分组返回一个统计值，而分析函数采用partition by分组，并且每组每行都可以返回一个统计值。
+
+              
+
+分析函数的形式
+分析函数带有一个开窗函数over()，包含三个分析子句:分组(partition by), 排序(order by), 窗口(rows) ，他们的使用形式如下：over(partition by xxx order by yyy rows between zzz)。
+注：窗口子句在这里我只说rows方式的窗口,range方式和滑动窗口也不提
+
+
+
+
+
+
+今天面试的是小米的大数据开发岗位。
+首先自我介绍后开始根据我的工作讲我主要做了那些，用到了什么等等，使用语言。
+最后纠结于比较为什么技术选型用Hawq 不用hive的问题。
+觉得面试最应该做的是把自己会的东西掌握好。
+还有两道算法题目：
+
+1.矩阵最小路径
+假定给定一个N*M的矩阵 ?假定N等于4 M等于4
+1 ?2 ?3 ?4
+4 ?8 ?3 ?2
+6 ?1 ?4 ?5
+7 ?3 ?7 ?8?
+现在生成一个大小为N*M的矩阵dp,dp[i][j]的含义为从(0,0)点到(i,j)点的最小路径
+解题分析：
+DP(动态规划，空间压缩)
+现在生成一个大小为N*M的矩阵dp,dp[i][j]的含义为从(0,0)点到(i,j)点的最小路径
+显然 第一行的路径值就为从0,0点到i,j每一点值的和
+
+1 3 6 10
+1
+5
+11
+18 ? ? ? ? ? ? ?
+置dp[0][0] = 矩阵值[0][0]; 对于第一行来说dp[i][0] = dp[i-1][0]+矩阵值[i][0];对于第一列来说?dp[0][i] = dp[0][i-1]+矩阵值[0][i];
+对于除第一行第一列之后其他的位置有dp[i][j] = min(dp[i-1][j],dp[i][j-1])+矩阵值[i][j];
+至此,状态转移方程求解完毕
+
+[cpp]?view plain?copy
+class?MinimumPath?{????
+public:????
+????int?getMin(vector<vector<int>?>?juzhen,?int?n,?int?m)?{????
+????????vector<vector<int>>dp(n,vector<int>(m,0));????
+????????dp[0][0]?=juzhen[0][0];????
+????????for?(int?i=1;?i<n;?++i)????
+????????????dp[i][0]?=?dp[i-1][0]+juzhen[i][0];????
+????????for?(int?i=1;?i<m;?++i)????
+????????????dp[0][i]?=?dp[0][i-1]+juzhen[0][i];????
+????????for(int?i=1;i<n;++i){????
+????????????for?(int?j=1;?j<m;?++j)?{????
+????????????????dp[i][j]?=?min(dp[i][j-1],dp[i-1][j])+juzhen[i][j];????
+????????????}????
+????????}????
+????????return?dp[n-1][m-1];????
+????}????
+};????
+
+
+
+2.对一个无序数组排序，这个数组的特点是里面有很多的相同元素，求如何在空间，时间都最优的情况下排序。
+
+目前想法是两种，一种是直接快排，O(nlogn)，另一种是hash最优为O(n)，但是很耗空间。
+
+相同的比较多，用三路快排吧
+
+
+
+
+
+
+
+
+
+
+
+yarn模式下想在一个work节点上在启动多个Excutor 的命令是什么路
+
+
+
+jdbc连接hive。没有用户名和密码怎么办
+
+
+
+设置executor核数  和总核数
+
+
+

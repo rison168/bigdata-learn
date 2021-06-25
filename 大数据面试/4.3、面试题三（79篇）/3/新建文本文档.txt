@@ -1,0 +1,47 @@
+ConcurrentHashMap是由Segment数组结构和HashEntry数组结构组成。
+Segment是一种可重入锁ReentrantLock，在ConcurrentHashMap里扮演锁的角色，HashEntry则用于存储键值对数据。
+一个ConcurrentHashMap里包含一个Segment数组，Segment的结构和HashMap类似，是一种数组和链表结构， 一个Segment里包含一个HashEntry数组，每个HashEntry是一个链表结构的元素， 每个Segment守护者一个HashEntry数组里的元素,当对HashEntry数组的数据进行修改时，必须首先获得它对应的Segment锁。
+
+
+java基础：
+第七题：是否能够被GC主要看A和B对象是否挂在ROOT上，如果挂在root上，并且还正在运行，那么就不会被回收，如果挂载root上，没有运行或者已经被释放，等到生命周期结束就可以被GC，因为GC在JVM中是使用的ROOT算法。
+
+
+
+1.Hbase的ZK连接超时相关参数调优：默认的ZK超时设置太短，一旦发生FULL GC，极其容易导致ZK连接超时；
+2.Hbase的JVM GC相关参数调优：可以通过GC调优获得更好的GC性能，减少单次GC的时间和FULL GC频率；
+3.ZK Server调优：这里指的是ZK的服务端调优，ZK客户端（比如Hbase的客户端）的ZK超时参数必须在服务端超时参数的范围内，否则ZK客户端设置的超时参数起不到效果；
+4.HDFS读写数据相关参数需调优；
+5.YARN针对各个节点分配资源参数调整：YARN需根据真实节点配置分配资源，之前的YARN配置为每个节点分配的资源都远大于真实虚拟机的硬件资源；
+6.集群规划需优化：之前的集群规划中，为了充分利用虚拟机资源，NameNode、NodeManager、DataNode，RegionServer会混用同一个节点，这样会导致这些关键的枢纽节点通信和内存压力过大，从而在计算压力较大时容易发生异常。正确的做法是将枢纽节点（NameNode，ResourceManager，HMaster）和数据+计算节点分开。
+
+
+mapredcue优化：
+1.自定义分区 extends Partitioner 可以使用map输出的key或者value
+2.自定义分组  implements RawComparator 重点
+3.启用Combiner  减少reduce端拉去的文件（key value对）数量
+4.shuffle启用压缩  map端压缩 reduce端解压缩   平衡集群的资源（CPU 内存）和网络IO
+5.CombinerFileInputFormat来合并小文件
+6.调整shffle环形缓冲区大小以及spill溢写的阈值(MapOutputBuffer)
+
+
+
+
+Hbase内部机制：
+HBase由client、zookeeper、master、regionserver组成，每个regionserver内部会由多个region和一个blockCache组成，每个region会包含多个store，每个store内部包含memstore、storeFile，写入数据时，先向memstore中写入，写满后会溢写磁盘形成storeFile文件，以HFile的形式，粗放到HDFS上，读取文件时，先从memstore中查找，找不到再到blockcache中查找，找不到再从磁盘获取，并写入blockcache中，便于后续读取。
+
+
+
+简述synchronized和java.util.concurrent.locks.Lock的异同
+1.synchronized 用在方法和代码块的区别?
+     a. 可以只对需要同步的使用
+     b.与wait（），notify（）和notifyall（）方法使用比较方便
+2.wait（）
+    a。释放持有的对象锁，线程进入等待池，释放cpu，其他正在等待的线程可以获得锁，而sleep方法，线程会休眠一段时间，线程不会释放锁。
+3.ReentrantLock 
+   还包括了中断锁等待和定时锁等待，
+在并发量小的时候，用synchronize是比较好的选择，并发量大的时候用Lock。
+synchronize是自动释放锁，Lock是主动释放锁
+Lock可以设定所等待的时间，
+有些操作不会发生冲突现象，需要用Lock解决，比如同时读文件。
+

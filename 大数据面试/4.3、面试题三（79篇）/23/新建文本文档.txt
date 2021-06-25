@@ -1,0 +1,71 @@
+public class Test {
+	public static void main(String[] args) {
+        int[] arr = { 1,20,50,30,10,90,7,12,100,40,8};
+        int searchWord = 20; // 所要查找的数
+        Arrays.sort(arr); //二分法查找之前，一定要对数组元素排序
+        System.out.println(Arrays.toString(arr));
+        System.out.println(searchWord+"元素的索引："+binarySearch(arr,searchWord));
+    }
+ 
+    public static int binarySearch(int[] array, int value){
+        int low = 0;
+        int high = array.length - 1;
+        while(low <= high){
+            int middle = (low + high) / 2;
+            if(value == array[middle]){
+                return middle;         //返回查询到的索引位置
+            }
+            if(value > array[middle]){
+                low = middle + 1;
+            }
+            if(value < array[middle]){
+                high = middle - 1;
+            }
+        }
+        return -1;     //上面循环完毕，说明未找到，返回-1
+    }
+}
+
+
+
+
+
+hive 不支持 where in 子查询 
+改写如下：
+select a.id from table_a a left join table_b  b on a.id=b.id where b.id is null
+
+hive在0.13后已支持in与not in查询
+
+
+
+
+
+linux第一题：
+iconv -f utf-8 -t gbk a.log -o a_gbk.log
+
+linux的第二题：
+cat linux.log | sort | uniq -d > linux2.log
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

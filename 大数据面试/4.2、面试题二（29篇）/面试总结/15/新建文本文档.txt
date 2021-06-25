@@ -1,0 +1,87 @@
+第一题：
+reduceByKey：(1,2),(3,10)
+groupByKey:(1,[2]),(3,[4,6])
+flatMapValues:(1,2),(1,3),(1,4),(1,5),(3,4),(3,5)
+
+
+第二题：
+subtractByKey：(1,2)
+rightOuterJoin:(3,(Some(4),9))(3,(Some(6),9))
+cogroup:(1,[2],[]))(3,([4, 6],[9]))
+
+
+scalawordcount
+val conf = new SparkConf().setMaster("local").setAppName("wc")
+new SparkContext(conf).textFile("./words").flatMap(_.split(" ")).map((_,1)).reduceByKey(_+_).sortBy(_._2,false).foreach(println)
+
+
+
+java版wordcount
+public class WordCount {
+    public static void main(String[] args) {
+ 
+        SparkConf conf = new SparkConf();
+        conf.setAppName("wordCount");    //设置应用的name
+        conf.setMaster("local");        //本地运行
+ 
+        JavaSparkContext sc = new JavaSparkContext( conf );   
+        JavaRDD<String> textFile = sc.textFile("./words.txt");    //设置数据源       
+        //将没行数据按照空格拆分，返回到一个 集合,集合中 元素类型为 String
+        JavaRDD<String> words = textFile.flatMap( new FlatMapFunction<String, String>() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public Iterable<String> call(String line) throws Exception {
+                return Arrays.asList( line.split(" ") );
+            }
+        } );
+        //将 String类型的数据 转换为 二元组( word, 1 )
+        JavaPairRDD<String, Integer> word1 = words.mapToPair( new PairFunction<String, String, Integer>() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public Tuple2<String, Integer> call(String word) throws Exception {
+                return new Tuple2<String, Integer>( word, 1);
+            }
+        } );
+        //将二元组数据按照 相同的key 调用同一个 reduce方法, 将count累加到v1
+        JavaPairRDD<String, Integer> wordCount = word1.reduceByKey( new Function2<Integer, Integer, Integer>() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public Integer call(Integer v1, Integer v2) throws Exception {
+                return v1 + v2;
+            }
+        } );
+        //将统计完的 ( word,count )二元组 转换为 ( count,word ) 然后按照count进行排序
+        JavaPairRDD<Integer, String> countWord = wordCount.mapToPair( new PairFunction<Tuple2<String,Integer>, Integer, String>() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public Tuple2<Integer, String> call(Tuple2<String, Integer> tuple) throws Exception {
+                return new Tuple2<Integer, String>( tuple._2, tuple._1 );
+            }
+        } );
+        // 按照 count进行排序，参数的
+		// 按照 count进行排序，参数的flase表示 按照降序排序
+        JavaPairRDD<Integer, String> sortCountWord = countWord.sortByKey(false);
+        // 将排好序的 ( count,word )二元组 转换为 ( word,count )
+        JavaPairRDD<String, Integer> sortWordCount = sortCountWord.mapToPair( new PairFunction<Tuple2<Integer,String>, String, Integer>() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public Tuple2<String, Integer> call(Tuple2<Integer, String> tuple) throws Exception {
+                return new Tuple2<String, Integer>( tuple._2, tuple._1 );
+            }
+        } );
+        //遍历
+        sortWordCount.foreach( new VoidFunction<Tuple2<String,Integer>>() {
+            @Override
+            public void call(Tuple2<String, Integer> tuple ) throws Exception {
+                System.out.println( tuple );
+            }
+        });
+        sc.close();
+    }
+}
+		
+		
+		
+		
+		
+		

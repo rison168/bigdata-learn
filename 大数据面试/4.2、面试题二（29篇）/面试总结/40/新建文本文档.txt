@@ -1,0 +1,43 @@
+水仙花数：
+public static Integer[] getSXH(int start,int end){
+   List<Integer> result = new ArrayList<Integer>();
+   for (int i=start;i<=end;i++){
+      int x,y,z;
+      x = i/100;
+      y = i%100/10;
+      z = i%10;
+      System.out.println("i="+i+"->x="+x+"->y="+y+"->z="+z);
+      double temp = Math.pow(x,3)+Math.pow(y,3)+Math.pow(z,3);
+      if (i == temp){
+         result.add(i);
+      }
+   }
+   Integer[] a = new Integer[result.size()];
+   return result.toArray(a);
+}
+
+
+reduce side join : 在map 阶段，map 函数同时读取两个文件File1 和File2，为了区分
+两种来源的key/value 数据对，对每条数据打一个标签（tag）,比如：tag=0 表示来自文件File1，
+tag=2 表示来自文件File2。
+
+map side join : Map side join 是针对以下场景进行的优化：两个待连接表中，有一个表非常大，而另一个表非常小，以至于小表可以直接存放到内存中。这样，我们可以将小表复制多份，让每个map task 内存中存在一份（比如存放到hash table 中），然后只扫描大表：对于大表中的每一条记录key/value，在hash table 中查找是否有相同的key 的记录，如果有，
+则连接后输出即可。
+
+Semi Join : Semi Join，也叫半连接，是从分布式数据库中借鉴过来的方法。它的产生动机是：对于reduce side join，跨机器的数据传输量非常大，这成了join 操作的一个瓶颈，
+如果能够在map 端过滤掉不会参加join 操作的数据，则可以大大节省网络IO。
+
+reduce side join + BloomFilter : BloomFilter 最常见的作用是：判断某个元素是否在一个集合里面。它最重要的两个方法是：add() 和contains()。最大的特点是不会存在 falsenegative，即：如果contains()返回false，则该元素一定不在集合中，但会存在一定的 falsepositive，即：如果contains()返回true，则该元素一定可能在集合中。
+
+
+
+具体的recovery操作流程如下：1， 由于block recovery 是由primary datanode发起，但该recovery操作需要在三个datanode上对该block进行操作（假设文件副本为3），所以primary datanode接收到命令的时候同时还收到了该block的targets datanode数组（其中就包括该datanode自身）2， primary datanode遍历targets datanode数组，对每一个datanode，向其发送一个start block recovery的指令。如果是其自身，则直接执行该指令。3， start block recovery指令会在datanode的磁盘中找到该block的物理块，并确认该block对应的验证信息和meta信息正确，并返回一个BlockRecord对象，表示这个block正在被recovery。4，对每个BlockRecord，查看keepLength标志位是否为true，如果为true，则只recovery blocksize 跟 namenode中记录的blocksize一致的block，否则全部都算。5， 对每个物理块，一旦真正开始recovery操作，则进行如下操作：在该datanode上找到该block，同时找到这个block对应的meta文件（每一个block都对应一个meta文件，用来记录该block的验证码等原信息），更新该block的stamp号（表示该block已经被修改过一次），如果需要recovery成的block的size 小于实际的block的size，则将实际的block截断成其需要的大小，并更新meta文件和验证信息。6， 最后，primary datanode向namenode汇报本次recovery block的信息，如新的block stamp变成了多少，block size被修改成了多少等，namenoe相应的更新这些信息。
+
+
+
+
+
+
+
+
+

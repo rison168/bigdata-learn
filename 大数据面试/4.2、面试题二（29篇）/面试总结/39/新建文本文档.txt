@@ -1,0 +1,18 @@
+SELECT id, name, age, income FROM
+(
+SELECT 
+CASE
+WHEN a.id IS NOT NULL THEN a.id
+WHEN b.id IS NOT NULL THEN b.id
+END AS id, 
+a.name, a.age, if(b.income IS NULL, 0, b.income) income
+FROM `A` a LEFT JOIN `B` b ON a.id=b.id
+UNION
+SELECT 
+CASE
+WHEN a.id IS NOT NULL THEN a.id
+WHEN b.id IS NOT NULL THEN b.id
+END AS id, 
+b.name, a.age, if(b.income IS NULL, 0, b.income) income
+FROM `A` a RIGHT JOIN `B` b ON a.id=b.id
+) AS t ORDER BY id;

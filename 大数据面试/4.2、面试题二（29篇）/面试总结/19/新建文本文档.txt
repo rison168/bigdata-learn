@@ -1,0 +1,239 @@
+
+Spark scala：
+
+object WordCount{
+	def main(args: Array[String]):Unit={
+
+		val conf = new SparkConf()
+		conf.setMaster("local")
+		conf.setAppName("wc")
+		val sc = new SparkContext(conf)
+		val lines:RDD[String] = sc.textFile("./words")
+		val words:RDD[String] = lines.flatMap(line=>{
+		  line.split(" ")
+	})
+		val pairWords:RDD[(String,Int)] = words.map(word=>{new Tuple2(word,1)})
+		val result:RDD[(String,Int)] = pairWords.reduceByKey((v1:Int,v2:Int)=>{v1+v2})
+		val end:RDD[(String,Int)] = result.sortBy(tuple=>{tuple._2},false)
+		end.foreach(tuple=>{
+		  println(tuple)
+		})
+		sc.stop()
+}
+}
+
+
+
+
+HDFS以流式数据访问模式来存储文件，运行于大量硬件集群上。个人觉得，HDFS被设计成为支持AP，并具有最终一致性（简单一致性模型）。为什么呢？因为在集群系统中P是必须的，而HDFS对文件采用一次写入多次读入的逻辑设计，不支持文件并发写入、不支持文件修改。所以高可用性对HDFS来说至关重要的！
+ 
+为实现高可用性，HDFS采用诸多策略，包括：
+冗余副本策略机架策略心跳机制安全模式校验和回收站元数据保护快照机制
+
+
+
+
+java程序内存泄漏排查
+
+有个java程序越跑越慢，如何排查？
+首先通过jps找到java进程ID。然后top -p [pid]发现内存占用达到了最大值（-Xmx）。开始怀疑是由于频繁Full GC导致的，于是通过jstat -gcutil [pid] 60000查看GC的情况，其中60000表示每隔1分钟输出一次。果然是Full GC次数太多，JVM大部分时间都进行Full GC，而此时JVM会暂停其他一切工作，所以程序运行得非常慢。
+那到底的程序的哪一部分导致消耗了这么多的内存呢？通过jmap -histo:live [pid]查看进程中各种类型的对象创建了多少个，以及每种类型的对象占多少内存。当我看到有个对象被创建了5千多万个实例时，我就能定位到是哪儿的问题了。
+顺带说一下，通过jmap还可以生成JVM的内存dump文件，命令为jmap -dump:format=b,file=文件名 [pid]，然后通过jhat命令在浏览器中查看，或者通过jvisualvm、eclipse memory analyzer等工具进行查看。使用jhat命令查看的方式为：jhat -J-Xmx1024M [file]，等控制台输出Started HTTP server on port 7000. Server is ready.后在浏览器中输入ip:7000就可以查看各上类中各种实例被创建了多少个。
+
+
+
+
+
+在使用spark streaming消费kafka数据时，程序异常中断下发现会有数据丢失的情况。
+
+下文将说明如何避免这种情况。
+
+
+
+Definitions
+
+
+问题开始之前先解释下流处理中的一些概念：
+
+
+
+At most once - 每条数据最多被处理一次（0次或1次）
+
+At least once - 每条数据最少被处理一次 (1次或更多)
+
+Exactly once - 每条数据只会被处理一次（没有数据会丢失，并且没有数据会被多次处理）
+
+
+1.High Level API
+
+
+如果不做容错，将会带来数据丢失
+
+因为receiver一直在接收数据，在其没有处理的时候（已通知zk数据接收到），executor突然挂掉(或是driver挂掉通知executor关闭)，缓存在其中的数据就会丢失。
+
+因为这个问题，Spark1.2开始加入了WAL（Write ahead log）
+
+开启 WAL,将receiver获取数据的存储级别修改为StorageLevel.MEMORY_AND_DISK_SER
+
+
+val conf = new SparkConf()conf.set("spark.streaming.receiver.writeAheadLog.enable","true")
+val sc= new SparkContext(conf)val ssc = new StreamingContext(sc,Seconds(5))
+ssc.checkpoint("walDir") val lines = KafkaUtils.createStream[String, String, StringDecoder, StringDecoder](ssc, kafkaParams, topicMap, StorageLevel.MEMORY_AND_DISK_SER).map(_._2)
+
+
+开启WAL后，依旧存在数据丢失问题
+
+即使按官方说的设置了WAL，依旧会有数据丢失，这是为什么？因为在任务中断时receiver也被强行终止了，将会造成数据丢失，提示如下：
+
+
+ERROR ReceiverTracker: Deregistered receiver for stream 0: Stopped by driver
+WARN BlockGenerator: Cannot stop BlockGenerator as its not in the Active state [state = StoppedAll]
+WARN BatchedWriteAheadLog: BatchedWriteAheadLog Writer queue interrupted.
+
+
+在Streaming程序的最后添加代码，只有在确认所有receiver都关闭的情况下才终止程序。
+
+
+sys.addShutdownHook({
+  ssc.stop(true,true
+)})
+
+
+调用的方法为：
+
+
+def stop(stopSparkContext: Boolean, stopGracefully: Boolean): Unit
+
+
+WAL带来的问题
+
+
+WAL实现的是At-least-once语义。
+
+如果在写入到外部存储的数据还没有将offset更新到zookeeper就挂掉，这些数据将会被反复消费。同时，降低了程序的吞吐量。
+
+
+2.Kafka Direct API
+
+
+Kafka direct API 的运行方式，将不再使用receiver来读取数据，也不用使用WAL机制。
+
+同时保证了exactly-once语义，不会在WAL中消费重复数据。不过需要自己完成将offset写入zk的过程，在官方文档中都有相应介绍。
+
+例如如下的调用方式：
+
+
+messages.foreachRDD(rdd=>{
+   val message = rdd.map(_._2)  
+//对数据进行一些操作
+   message.map(method)
+//更新zk上的offset (自己实现)
+   updateZKOffsets(rdd)
+})
+
+
+
+
+简介
+DistributedCache是Hadoop为MapReduce框架提供的一种分布式缓存机制，它会将需要缓存的文件分发到各个执行任务的子节点的机器中，各个节点可以自行读取本地文件系统上的数据进行处理。
+符号链接
+可以同在原本HDFS文件路径上+”#somename”来设置符号连接（相当于一个快捷方式）
+这样在MapReduce程序中可以直接通通过：
+File file = new File("somename");1
+来获得这个文件
+缓存在本地的目录设置
+以下为默认值：
+<property>
+  <name>mapred.local.dir</name>
+  <value>${hadoop.tmp.dir}/mapred/localdir/filecache</value>
+</property>
+
+<property>
+  <name>local.cache.size</name>
+  <value>10737418240</value> 
+</property>123456789
+应用场景
+
+1.分发第三方库(jar,so等) 2.共享一些可以装载进内存的文件 3.进行类似join连接时，小表的分发
+
+使用方式
+旧版本的DistributedCache已经被注解为过时，以下为Hadoop-2.2.0以上的新API接口，测试的Hadoop版本为2.7.2。
+Job job = Job.getInstance(conf);
+//将hdfs上的文件加入分布式缓存
+job.addCacheFile(new URI("hdfs://url:port/filename#symlink"));123
+由于新版API中已经默认创建符号连接，所以不需要再调用setSymlink(true)方法了，可以通过
+System.out.println(context.getSymlink());1
+来查看是否开启了创建符号连接。
+之后在map/reduce函数中可以通过context来访问到缓存的文件，一般是重写setup方法来进行初始化：
+@Override
+    protected void setup(Context context) throws IOException, InterruptedException {
+        super.setup(context);
+        if (context.getCacheFiles() != null && context.getCacheFiles().length > 0) {
+        String path = context.getLocalCacheFiles()[0].getName();
+        File itermOccurrenceMatrix = new File(path);
+        FileReader fileReader = new FileReader(itermOccurrenceMatrix);
+        BufferedReader bufferedReader = new BufferedReader(fileReader);
+        String s;
+        while ((s = bufferedReader.readLine()) != null) {
+            //TODO:读取每行内容进行相关的操作
+        }
+        bufferedReader.close();
+        fileReader.close();
+    }
+}12345678910111213141516
+得到的path为本地文件系统上的路径。
+这里的getLocalCacheFiles方法也被注解为过时了，只能使用context.getCacheFiles方法，和getLocalCacheFiles不同的是，getCacheFiles得到的路径是HDFS上的文件路径，如果使用这个方法，那么程序中读取的就不再试缓存在各个节点上的数据了，相当于共同访问HDFS上的同一个文件。
+可以直接通过符号连接来跳过getLocalCacheFiles获得本地的文件。
+单机安装的hadoop没有通过，提示找不到该文件，待在集群上进行测试
+
+
+
+推测执行(Speculative Execution)是指在分布式集群环境下，因为程序BUG，负载不均衡或者资源分布不均等原因，造成同一个job的多个task运行速度不一致，有的task运行速度明显慢于其他task（比如：一个job的某个task进度只有10%，而其他所有task已经运行完毕），则这些task拖慢了作业的整体执行进度，为了避免这种情况发生，Hadoop会为该task启动备份任务，让该speculative task与原始task同时处理一份数据，哪个先运行完，则将谁的结果作为最终结果。
+推测执行优化机制采用了典型的以空间换时间的优化策略，它同时启动多个相同task（备份任务）处理相同的数据块，哪个完成的早，则采用哪个task的结果，这样可防止拖后腿Task任务出现，进而提高作业计算速度，但是，这样却会占用更多的资源，在集群资源紧缺的情况下，设计合理的推测执行机制可在多用少量资源情况下，减少大作业的计算时间。
+关于MRv1中的推测执行机制，我已经在“Hadoop中Speculative Task调度策略”（http://dongxicheng.org/mapreduce/hadoop-speculative-task/）中进行了介绍，有兴趣的读者可先阅读这篇文章。
+2. MRv2中采用的算法
+MRv2限定了任意一个作业的备份任务的数目上线，该数目是以下三个数值的最大值：
+（1）MINIMUM_ALLOWED_SPECULATIVE_TASKS（常量10）
+（2）PROPORTION_TOTAL_TASKS_SPECULATABLE（常量0.01） * totalTaskNumber
+（3）PROPORTION_RUNNING_TASKS_SPECULATABLE （常量0. 1）* numberRunningTasks
+当决定一个任务是够可以启动备份任务时，采用了下面的计算方法：
+总是取speculationValue值最大的任务并为之启动备份任务，speculationValue计算方法为：
+
+speculationValue= estimatedEndTime – estimatedReplacementEndTime
+
+其中，estimatedEndTime是通过预测算法推测的该任务的最终完成时刻，计算方法为：
+
+estimatedEndTime = estimatedRunTime + taskAttemptStartTime
+
+其中，taskAttemptStartTime为该任务的启动时间，而estimatedRunTime为推测出来的任务运行时间，计算方法如下：
+
+estimatedEndTime = (timestamp – start) / Math.max(0.0001, progress)
+
+其中，timestamp为当前时刻，而start为任务开始运行时间，（timestamp-start）表示已经运行时间，progress为任务运行进度（0.0~1.0）。
+estimatedReplacementEndTime含义为：如果此刻启动该任务，（可推测出来的）任务最终可能的完成时刻。很明显，如果estimatedReplacementEndTime大于estimatedEndTime，则没必要启动备份任务，因为即使启动了，它的完成时刻也会大于当前正在运行任务的完成时刻，只有当estimatedReplacementEndTime小于estimatedEndTime时，才有必要启动备份任务。而MRv2总是选择speculationValue值最大的任务并为之启动备份任务，且启动备份任务之前需检查是否满足以下条件：
+（1） 每个任务最多只能有一个备份任务
+（2） 已经完成的任务数目比例不小于MINIMUM_COMPLETE_PROPORTION_TO_SPECULATE（0.05，即5%），只有这样，才能有足够的历史信息估算estimatedReplacementEndTime
+estimatedReplacementEndTime计算过方法为：{当前时刻}+{已经成功运行完成的任务所使用的平均运行时间}。
+简单提炼一下核心思想：在某一时刻，判断一个任务是否拖后腿或者是否是值得为其运行备份任务时，则首先假设为其启动一个备份任务，那我们估算一下它的完成时间estimatedReplacementEndTime，同样，如果按照此刻该任务的计算速度，我们可以估算一下该任务最有可能的完成时间estimatedEndTime，如果estimatedEndTime与estimatedReplacementEndTime之差越大，则表明为该任务启动备份任务的价值越大。
+3. 推测执行相关类
+Speculator是一个服务，它由DefaultSpeculator实现，DefaultSpeculator接受并处理以下几种事件：
+
+（1）ATTEMPT_STATUS_UPDATE
+（2）ATTEMPT_START
+（3）TASK_CONTAINER_NEED_UPDATE
+（4） JOB_CREATE
+
+DefaultSpeculator每隔一段事件会扫描一次所有正在运行的任务，如果一个任务可以启动备份任务，则会向Task发出一个T_ADD_SPEC_ATTEMPT事件，以启动另外一个任务实例。
+DefaultSpeculator依赖于一个执行时间估算器，默认采用了LegacyTaskRuntimeEstimator，此外，MRv2还提供了另外一个实现：ExponentiallySmoothedTaskRuntimeEstimator，该实现采用了平滑算法对结果进行平滑处理。
+
+
+
+
+
+
+联机事务处理OLTP（on-line transaction processing） 侧重实时性 
+联机分析处理OLAP（On-Line Analytical Processing） 侧重分析 其实就是离线
+
+就是大数据两个方向 一个是实时分析 一个是离线分析
+
+

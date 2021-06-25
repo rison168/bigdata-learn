@@ -1,0 +1,61 @@
+分区和分桶最大的区别就是分桶随机分割数据库，分区是非随机分割数据库。
+因为分桶是按照列的哈希函数进行分割的，相对比较平均；而分区是按照列的值来进行分割的，容易造成数据倾斜。
+其次两者的另一个区别就是分桶是对应不同的文件（细粒度），分区是对应不同的文件夹（粗粒度）。
+
+
+hive 的内部表和外部表的区别：
+1）创建表时：创建内部表时，会将数据移动到数据仓库指向的路径；若创建外部表，仅记录数据所在的路径， 不对数据的位置做任何改变。
+2）删除表时：在删除表的时候，内部表的元数据和数据会被一起删除， 而外部表只删除元数据，不删除数据。这样外部表相对来说更加安全些，数据组织也更加灵活，方便共享源数据。
+
+
+
+
+MapReduce数据倾斜：1. 增加reduce 的jvm内存
+2. 增加reduce 个数
+3. customer partition
+4. 其他优化的讨论.
+5. reduce sort merge排序算法的讨论
+6. 正在实现中的hive skewed join.
+7. pipeline
+8. distinct
+9. index 尤其是bitmap index
+
+
+3、能先进行 group 操作的时候先进行 group 操作，把 key 先进行一次 reduce,之后再进行 count 或者 distinct count 操作。
+
+
+4、join 操作中，使用 map join 在 map 端就先进行 join ，免得到reduce 时卡住。
+
+
+coalesce和repartition都是可以改变分区个数的算子，都是transformation类算子，
+区别在于，
+repartition一般用户增大分区个数，会产生shuffle，
+而coalesce一般用于减少分区个数，当第二个参数为true时，会产生shuffle，就相当于repartition，
+如果使用coalesce算子增大分区，还设置不产生shuffle，则不会起作用。
+
+
+
+
+
+
+hadoop中多文件输出会用到MultipleOutputs<k,v>，spark中文件的读入和输出，其实是调用hadoop的，可以继承MultipleTextOutputFormat来实现
+
+
+rdd和partition的区别，rdd是由一系列的partition组成。
+
+
+13题：
+常用的有两种
+一种是填充
+SqlDataAdapter adapder = new SqlDataAdapter("sqlcmd", con);
+adapder.Fill(dataset1, "tableName");
+
+另一种采用SqlDataReader;这种性能相对比较好
+SqlDataReader sdr = mycom.ExecuteReader();
+DataTable dt = new DataTable();
+dt.Load(sdr); 
+
+
+
+
+

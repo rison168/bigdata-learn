@@ -1,0 +1,291 @@
+三种  sed -n '10{p;q}'
+head -n 10 | tail -n 1
+awk 'NR==10' 
+
+
+
+++i非安全，一个线程对一个variable操作时会先copy这个variable，操作完写入。当高并发的时候，多个线程会操作同一个variable，写入的时候variable的值会不一样。可以用锁(synchronized)或者原子类(AtomicInteger)来解决
+
+
+
+1、直接法
+采用暴力的方法，遍历两个链表，判断第一个链表的每个结点是否在第二个链表中，时间复杂度为O(len1*len2)，耗时很大。
+2、hash计数法
+如 果 两个链表相交，则两个链表就会有共同的结点；而结点地址又是结点唯一标识。因而判断两个链表中是否存在地址一致的节点，就可以知道是否相交了。可以对第一 个链表的节点地址进行hash排序，建立hash表，然后针对第二个链表的每个节点的地址查询hash表，如果它在hash表中出现，则说明两个链表有共 同的结点。这个方法的时间复杂度为：O(max(len1+len2)；但同时还得增加O(len1)的存储空间存储哈希表。这样减少了时间复杂度，增加 了存储空间。
+以链表节点地址为值，遍历第一个链表，使用Hash保存所有节点地址值，结束条件为到最后一个节点（无环）或Hash中该地址值已经存在（有环）。
+再遍历第二个链表，判断节点地址值是否已经存在于上面创建的Hash表中。
+这个方面可以解决题目中的所有情况，时间复杂度为O(m+n)，m和n分别是两个链表中节点数量。由于节点地址指针就是一个整型，假设链表都是在堆中动态创建的，可以使用堆的起始地址作为偏移量，以地址减去这个偏移量作为Hash函数
+3、第三种思路是比较奇特的，在编程之美上看到的。先遍历第一个链表到他的尾部，然后将尾部的next指针指向第二个链表(尾部指针的next本来指向的是null)。这样两个链表就合成了一个链表，判断原来的两个链表是否相交也就转变成了判断新的链表是否有环的问题了：即判断单链表是否有环？
+
+
+
+4     [java]
+import?java.util.Stack;??
+??
+class?NodeWithMin?{??
+????public?int?value;??
+????public?int?min;??
+????public?NodeWithMin(int?v,?int?min)?{??
+????????value?=?v;??
+????????this.min?=?min;??
+????}??
+}??
+??
+public?class?StackWithMin?extends?Stack<NodeWithMin>?{??
+????public?void?push(int?value)?{??
+????????int?newMin?=?Math.min(value,?min());??
+????????super.push(new?NodeWithMin(?value,?newMin));??
+????}??
+??????
+????public?int?min()?{??
+????????if?(?this.isEmpty()?)?{??
+????????????return?Integer.MAX_VALUE;??
+????????}??
+????????else?{??
+????????????return?peek().min;??
+????????}??
+????}??
+}??
+
+
+
+
+
+
+
+
+
+
+
+shuffle阶段又可以分为Map端的shuffle和Reduce端的shuffle。
+　　一、Map端的shuffle
+　　Map端会处理输入数据并产生中间结果，这个中间结果会写到本地磁盘，而不是HDFS。每个Map的输出会先写到内存缓冲区中，当写入的数据达到设定的阈值时，系统将会启动一个线程将缓冲区的数据写到磁盘，这个过程叫做spill。
+　　在spill写入之前，会先进行二次排序，首先根据数据所属的partition进行排序，然后每个partition中的数据再按key来排序。partition的目是将记录划分到不同的Reducer上去，以期望能够达到负载均衡，以后的Reducer就会根据partition来读取自己对应的数据。接着运行combiner(如果设置了的话)，combiner的本质也是一个Reducer，其目的是对将要写入到磁盘上的文件先进行一次处理，这样，写入到磁盘的数据量就会减少。最后将数据写到本地磁盘产生spill文件(spill文件保存在{mapred.local.dir}指定的目录中，Map任务结束后就会被删除)。
+　　最后，每个Map任务可能产生多个spill文件，在每个Map任务完成前，会通过多路归并算法将这些spill文件归并成一个文件。至此，Map的shuffle过程就结束了。
+　　二、Reduce端的shuffle
+　　Reduce端的shuffle主要包括三个阶段，copy、sort(merge)和reduce。
+　　首先要将Map端产生的输出文件拷贝到Reduce端，但每个Reducer如何知道自己应该处理哪些数据呢？因为Map端进行partition的时候，实际上就相当于指定了每个Reducer要处理的数据(partition就对应了Reducer)，所以Reducer在拷贝数据的时候只需拷贝与自己对应的partition中的数据即可。每个Reducer会处理一个或者多个partition，但需要先将自己对应的partition中的数据从每个Map的输出结果中拷贝过来。
+　　接下来就是sort阶段，也成为merge阶段，因为这个阶段的主要工作是执行了归并排序。从Map端拷贝到Reduce端的数据都是有序的，所以很适合归并排序。最终在Reduce端生成一个较大的文件作为Reduce的输入。
+
+
+
+
+
+
+6 Map阶段
+读取源表的数据，Map输出时候以Join on条件中的列为key，如果Join有多个关联键，则以这些关联键的组合作为key;
+Map输出的value为join之后所关心的(select或者where中需要用到的)列；同时在value中还会包含表的Tag信息，用于标明此value对应哪个表；
+按照key进行排序
+Shuffle阶段
+根据key的值进行hash,并将key/value按照hash值推送至不同的reduce中，这样确保两个表中相同的key位于同一个reduce中
+Reduce阶段
+根据key的值完成join操作，期间通过Tag来识别不同表中的数据。
+
+
+
+
+select A.ID from A left join B on A.ID=B.ID where B.ID is null
+
+
+7.  select?*?from?a?where?id?not?in?(select?id?from?b);
+
+
+
+
+A、B两表，找出ID字段中，存在A表，但是不存在B表的数据。A表总共13w数据，去重后大约3W条数据，B表有2W条数据，且B表的ID字段有索引。
+方法一
+　　使用 not in ,容易理解,效率低? ~执行时间为：1.395秒~
+1 select distinct A.ID from  A where A.ID not in (select ID from B)
+方法二
+　　使用 left join...on... , "B.ID?isnull" 表示左连接之后在B.ID 字段为 null的记录? ~执行时间：0.739秒~
+1 select A.ID from A left join B on A.ID=B.ID where B.ID is null
+　　图解
+
+
+
+
+方法三
+　　逻辑相对复杂,但是速度最快? ~执行时间: 0.570秒~（感觉这种方式挺好）之前A/B表位置写反了，很明显可以看出为问题所在
+，在碰到问题可以分一下
+1  select * from  A
+2?where?(select?count(1)?as?num?from?B?where?A.ID?=?B.ID)?=?0
+
+
+
+
+https://blog.csdn.net/longzilong216/article/details/20711433
+
+
+
+整个计算过程是：
+（1）在map阶段，把所有记录标记成<key, value>的形式，其中key是id，value则根据来源不同取不同的形式：来源于表A的记录，value的值为"a#"+name；来源于表B的记录，value的值为"b#"+score。
+（2）在reduce阶段，先把每个key下的value列表拆分为分别来自表A和表B的两部分，分别放入两个向量中。然后遍历两个向量做笛卡尔积，形成一条条最终结果。
+
+
+
+
+
+
+整个计算过程是：
+（1）在map阶段，把所有记录标记成<key, value>的形式，其中key是id，value则根据来源不同取不同的形式：来源于表A的记录，value的值为"a#"+name；来源于表B的记录，value的值为"b#"+score。
+（2）在reduce阶段，先把每个key下的value列表拆分为分别来自表A和表B的两部分，分别放入两个向量中。然后遍历两个向量做笛卡尔积，形成一条条最终结果。
+
+
+
+
+9  原因：
+1)、key分布不均匀
+2)、业务数据本身的特性
+3)、建表时考虑不周
+4)、某些SQL语句本身就有数据倾斜       
+参数调节：
+hive.map.aggr=true
+Map 端部分聚合，相当于Combiner
+hive.groupby.skewindata=true
+有数据倾斜的时候进行负载均衡，
+SQL语句调节：
+如何Join：
+关于驱动表的选取，选用join key分布最均匀的表作为驱动表
+做好列裁剪和filter操作，以达到两表做join的时候，数据量相对变小的效果。
+大小表Join：
+使用map join让小的维度表（1000条以下的记录条数） 先进内存。在map端完成reduce.
+空值产生的数据倾斜
+解决方法1： user_id为空的不参与关联 解决方法2 ：赋与空值分新的key值
+
+
+
+
+
+
+
+
+
+
+
+10  HRegionServer所在的位置，然后管理HRegionServer。 
+HBase内部是通过DFS client把数据写到HDFS上的 
+每一个HRegionServer有多个HRegion，每一个HRegion有多个Store，每一个Store对应一个列簇。 
+HFile是HBase中KeyValue数据的存储格式，HFile是Hadoop的二进制格式文件，StoreFile就是对HFile进行了封装，然后进行数据的存储。 
+HStore由MemStore和StoreFile组成。 
+HLog记录数据的所有变更，可以用来做数据恢复。 
+hdfs对应的目录结构为
+namespace->table->列簇->列->单元格
+写数据流程
+zookeeper中存储了meta表的region信息，从meta表获取相应region信息，然后找到meta表的数据 
+根据namespace、表名和rowkey根据meta表的数据找到写入数据对应的region信息 
+找到对应的regionserver 
+把数据分别写到HLog和MemStore上一份 
+MemStore达到一个阈值后则把数据刷成一个StoreFile文件。若MemStore中的数据有丢失，则可以总HLog上恢复 
+当多个StoreFile文件达到一定的大小后，会触发Compact合并操作，合并为一个StoreFile，这里同时进行版本的合并和数据删除。 
+当Compact后，逐步形成越来越大的StoreFIle后，会触发Split操作，把当前的StoreFile分成两个，这里相当于把一个大的region分割成两个region。如下图：
+
+19.png
+读数据流程
+zookeeper中存储了meta表的region信息，所以先从zookeeper中找到meta表region的位置，然后读取meta表中的数据。meta中又存储了用户表的region信息。 
+根据namespace、表名和rowkey在meta表中找到对应的region信息 
+找到这个region对应的regionserver 
+查找对应的region 
+先从MemStore找数据，如果没有，再到StoreFile上读(为了读取的效率)。
+
+
+
+
+
+
+10  HRegionServer所在的位置，然后管理HRegionServer。 
+HBase内部是通过DFS client把数据写到HDFS上的 
+每一个HRegionServer有多个HRegion，每一个HRegion有多个Store，每一个Store对应一个列簇。 
+HFile是HBase中KeyValue数据的存储格式，HFile是Hadoop的二进制格式文件，StoreFile就是对HFile进行了封装，然后进行数据的存储。 
+HStore由MemStore和StoreFile组成。 
+HLog记录数据的所有变更，可以用来做数据恢复。 
+hdfs对应的目录结构为
+namespace->table->列簇->列->单元格
+写数据流程
+zookeeper中存储了meta表的region信息，从meta表获取相应region信息，然后找到meta表的数据 
+根据namespace、表名和rowkey根据meta表的数据找到写入数据对应的region信息 
+找到对应的regionserver 
+把数据分别写到HLog和MemStore上一份 
+MemStore达到一个阈值后则把数据刷成一个StoreFile文件。若MemStore中的数据有丢失，则可以总HLog上恢复 
+当多个StoreFile文件达到一定的大小后，会触发Compact合并操作，合并为一个StoreFile，这里同时进行版本的合并和数据删除。 
+当Compact后，逐步形成越来越大的StoreFIle后，会触发Split操作，把当前的StoreFile分成两个，这里相当于把一个大的region分割成两个region。如下图：
+
+19.png
+读数据流程
+zookeeper中存储了meta表的region信息，所以先从zookeeper中找到meta表region的位置，然后读取meta表中的数据。meta中又存储了用户表的region信息。 
+根据namespace、表名和rowkey在meta表中找到对应的region信息 
+找到这个region对应的regionserver 
+查找对应的region 
+先从MemStore找数据，如果没有，再到StoreFile上读(为了读取的效率)。
+
+
+
+
+
+
+
+
+
+10  HRegionServer所在的位置，然后管理HRegionServer。 
+HBase内部是通过DFS client把数据写到HDFS上的 
+每一个HRegionServer有多个HRegion，每一个HRegion有多个Store，每一个Store对应一个列簇。 
+HFile是HBase中KeyValue数据的存储格式，HFile是Hadoop的二进制格式文件，StoreFile就是对HFile进行了封装，然后进行数据的存储。 
+HStore由MemStore和StoreFile组成。 
+HLog记录数据的所有变更，可以用来做数据恢复。 
+hdfs对应的目录结构为
+namespace->table->列簇->列->单元格
+写数据流程
+zookeeper中存储了meta表的region信息，从meta表获取相应region信息，然后找到meta表的数据 
+根据namespace、表名和rowkey根据meta表的数据找到写入数据对应的region信息 
+找到对应的regionserver 
+把数据分别写到HLog和MemStore上一份 
+MemStore达到一个阈值后则把数据刷成一个StoreFile文件。若MemStore中的数据有丢失，则可以总HLog上恢复 
+当多个StoreFile文件达到一定的大小后，会触发Compact合并操作，合并为一个StoreFile，这里同时进行版本的合并和数据删除。 
+当Compact后，逐步形成越来越大的StoreFIle后，会触发Split操作，把当前的StoreFile分成两个，这里相当于把一个大的region分割成两个region。如下图：
+
+19.png
+读数据流程
+zookeeper中存储了meta表的region信息，所以先从zookeeper中找到meta表region的位置，然后读取meta表中的数据。meta中又存储了用户表的region信息。 
+根据namespace、表名和rowkey在meta表中找到对应的region信息 
+找到这个region对应的regionserver 
+查找对应的region 
+先从MemStore找数据，如果没有，再到StoreFile上读(为了读取的效率)。
+
+
+
+
+
+
+
+
+val a = sc.parallelize(List(1,2,5,3,4))    val b = a.map(_*3).collect   /*true是升序排序，false是降序排序*/  val c = a.map(_*2).sortBy(x =>x,true).collect   val d = a.map(_*2).sortBy(x =>x,false).collect 
+
+
+
+
+?12  应尽量避免在 where 子句中对字段进行 null值判断，否则将导致引擎放弃使用索引而进行全表扫描，如：
+select id from t where numis null
+可以在num上设置默认值0，确保表中num列没有null值，然后这样查询：
+select id from t where num=0
+2. 应尽量避免在 where 子句中使用!=或<>操作符，否则将导致引擎放弃使用索引而进行全表扫描。优化器将无法通过索引来确定将要命中的行数,因此需要搜索该表的所有行。
+3. 应尽量避免在 where 子句中使用 or来连接条件，否则将导致引擎放弃使用索引而进行全表扫描
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

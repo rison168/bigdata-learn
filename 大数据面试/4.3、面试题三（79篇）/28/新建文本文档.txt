@@ -1,0 +1,16 @@
+1. 客户机提交Application应用程序，发送请求到RS(ResourceManager),请求启动AM(ApplicationMaster)。
+2. RS收到请求后随机在一台NM(NodeManager)上启动AM（相当于Driver端）。
+3. AM启动，AM发送请求到RS，请求一批container用于启动Executor。
+4. RS返回一批NM节点给AM。
+5. AM连接到NM,发送请求到NM启动Executor。
+6. Executor反向注册到AM所在的节点的Driver。Driver发送task到Executor。
+Ø 总结
+Yarn-Cluster主要用于生产环境中，因为Driver运行在Yarn集群中某一台nodeManager中，每次提交任务的Driver所在的机器都是随机的，不会产生某一台机器网卡流量激增的现象，缺点是任务提交后不能看到日志。只能通过yarn查看日志。
+1. 客户机提交Application应用程序，发送请求到RS(ResourceManager),请求启动AM(ApplicationMaster)。
+2. RS收到请求后随机在一台NM(NodeManager)上启动AM（相当于Driver端）。
+3. AM启动，AM发送请求到RS，请求一批container用于启动Executor。
+4. RS返回一批NM节点给AM。
+5. AM连接到NM,发送请求到NM启动Executor。
+6. Executor反向注册到AM所在的节点的Driver。Driver发送task到Executor。
+Ø 总结
+Yarn-Cluster主要用于生产环境中，因为Driver运行在Yarn集群中某一台nodeManager中，每次提交任务的Driver所在的机器都是随机的，不会产生某一台机器网卡流量激增的现象，缺点是任务提交后不能看到日志。只能通过yarn查看日志。

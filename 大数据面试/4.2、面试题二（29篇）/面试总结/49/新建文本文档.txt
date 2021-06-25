@@ -1,0 +1,2 @@
+[2016-06-24 01:33:28,092] ERROR [Replica Manager on Broker 0]: Error when processing fetch request for partition [test-topic,0] offset 45 from consumer with correlation id 85452. Possible cause: Request for offset 45 but we only have log segments in the range 0 to 0. (kafka.server.ReplicaManager)
+

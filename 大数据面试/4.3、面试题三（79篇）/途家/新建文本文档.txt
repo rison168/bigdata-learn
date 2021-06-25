@@ -1,0 +1,37 @@
+学生	表A
+sid   sname
+1     小明
+2     小红
+
+课程表	表B
+cid   cname    cf
+1	  语文    100
+2	  数学	  120
+
+
+成绩	表C
+sid	   cid		cj
+1		1		80
+1		2		100
+2		1		90
+
+
+with D as
+(
+	select a.sid,a.name sum(c.dj) as 总分 
+	from A a, C c 
+	where a.sib=c.sid 
+	group by a.sid
+)
+
+select 
+	d.sid,
+	d.name,
+	b.cid,
+	b.cname,
+	c.cj/b.cf*d.总分  GPA
+from
+	C c,D d, B b
+where
+	c.sid = d.sid 
+	and d.cid = b.cid

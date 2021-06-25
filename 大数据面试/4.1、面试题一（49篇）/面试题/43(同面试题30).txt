@@ -1,0 +1,15 @@
+﻿无双科技公司
+1. spark为什么比hadoop快？
+    首先，Spark对分散的数据集进行抽样，创新地提出RDD(ResilientDistributedDataset)的概念，所有的统计分析任务被翻译成对RDD的基本操作组成的有向无环图(DAG)。RDD可以被驻留在RAM中，往后的任务可以直接读取RAM中的数据；同时分析DAG中任务之间的依赖性可以把相邻的任务合并，从而减少了大量不准确的结果输出，极大减少了HarddiskI/O，使复杂数据分析任务更高效。从这个推算，如果任务够复杂，Spark比Map/Reduce快一到两倍。
+     没有额外的复制，序列化，磁盘IO开销
+     DAG
+
+2. rdd的处理过程是什么，不要说概念
+
+
+亿玛在线公司
+1. 说说hbase的API都有哪些filter?
+   
+2. 说说你用过的storm?
+3. 日志表中的数据使用hive怎么实现，mapreduce怎么实现？题目见附件
+

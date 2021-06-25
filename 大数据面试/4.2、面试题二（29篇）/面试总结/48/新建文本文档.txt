@@ -1,0 +1,30 @@
+5、select userid，money from （select userid，min（paymenttime） as payment from ordertable group by userid） a join (select userid,payment,money from ordertble) b on a.userid=b.userid and a.payment=b.payment
+
+4
+select *
+from table
+start with cl = '1' 
+connect by parent_id = id;
+
+
+
+MapReduce，整个运行过程分为五个环节：
+　　1、向client端提交MapReduce job.
+　　2、随后yarn的ResourceManager进行资源的分配.
+　　3、由NodeManager进行加载与监控containers.
+　　4、通过applicationMaster与ResourceManager进行资源的申请及状态的交互，由NodeManagers进行MapReduce运行时job的管理.
+　　5、通过hdfs进行job配置文件、jar包的各节点分发。
+
+
+
+
+
+
+
+
+
+
+
+
+
+

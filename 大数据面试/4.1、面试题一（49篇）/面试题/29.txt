@@ -1,0 +1,30 @@
+
+电信云计算：
+1、单例；
+2、LinkdList和ArrayList的区别；
+3、http传输的时候是明文的，怎么解决安全问题；
+4、spark streaming和storm的区别，可以相互取代吗；
+5、垃圾回收机制；
+
+
+乐视：
+笔试题：
+1.Design a singleton class in multi-threading environment.
+2.How to find middle element of linked list in one pass.
+3.Reverse singly linked list in java recursively.
+4.Write a java program to implement Stack in java.
+面试问题：
+1、scala中的隐式函数的关键字；
+2、val x=y=1结果是什么；
+3、java内存模型；
+4、spark运行的job在哪里可以看到；
+5、hadoop中一个job提交到resourcemanager之后，resourcemanager会生成一个什么样的容器来放这个job；
+
+
+优酷：
+1、java内存模型；
+2、java垃圾回收机制；
+3、编译好的scala程序，运行的时候还需要scala环境吗；
+4、object中有哪些方法；
+5、如何监测集群中cpu，内存的使用情况，比如说：有一个spark特别占资源，特别慢，怎么排查这种情况；
+6、ArrayList中Array的长度超了是怎么增加的，一次增加多少；

@@ -1,0 +1,4 @@
+1.准备回答openstack  有哪些模块，各自什么作用
+2.你认为哪个模块最复杂
+3.你架设私有云openstack遇到哪些困难
+4.openstack flatdhcp   neutron网络流量是什么样的。。

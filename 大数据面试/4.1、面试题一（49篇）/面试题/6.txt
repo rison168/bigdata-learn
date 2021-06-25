@@ -1,0 +1,59 @@
+
+数据清洗流程（源，过程）
+sqoop导数据   是否了解sqoop
+sqoop底层（我说不参与）
+埋点怎么弄？
+nginx了解吗？（没搞过，不负责）
+你具体负责哪一块？
+hdfs了解多少？读写流程，架构
+写流程中备份三，其中一个写失败了怎么弄的？
+hdfs HA（过程，启动流程）
+简单说下hive
+底层实现
+数据清洗怎么发现的
+hive的表类型
+hive创建表的几种方式
+清洗完后面都有哪些要求
+sparkSQL介绍下（RDD、DataFrame）
+DSL和SQL用哪个比较多
+udf和udaf都写过哪些
+介绍下udaf
+自己写过吗？
+spark运行在Yarn上流程（cluster）
+介绍下yarn
+spark调优
+shuffle主要介绍下
+宽窄依赖
+为什么会发生数据倾斜，你怎么知道发生数据倾斜的
+shuffle怎么落地的？
+kafka和spark Streaming 的整合
+怎么保证数据kafka里的数据安全？（丢失）
+kafka的key为null可以吗
+怎么往kafka集群写数据的
+剩下的俩项目你选个讲吧
+推荐系统那一套
+负例少，正例多怎么办
+spark Streaming介绍下
+和Storm比较
+事物方面比较详细说下
+spark Streaming某一个task挂了，怎么解决的
+介绍下面向对象
+介绍下多态
+方法重载和重写
+这俩哪个属于多态
+说下多线程
+实现方式有哪些，区别
+同步锁  互斥，为什么常量不能做锁
+说下反射，都是做什么的
+反射机制怎么实现的
+linkedlist和arraylist的区别
+hashMap的存储机制和存取过程
+
+
+
+
+
+
+
+
+

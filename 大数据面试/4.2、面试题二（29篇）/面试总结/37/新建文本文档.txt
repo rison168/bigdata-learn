@@ -1,0 +1,64 @@
+问答题：
+3：public class ParseUrlUDF extends UDF {
+
+
+   public Text evaluate(final Text url, final Text key){
+      if(url == null || key == null){
+         return null;
+      }
+      String value = "";
+      String paramStr = url.toString().split("\\?")[1];
+      String[]paramArray = paramStr.split("&");
+      for (String keyValueStr : paramArray){
+         String _key = keyValueStr.split("=")[0];
+         String _value = keyValueStr.split("=")[1];
+         if(_key.equals(key)){
+            value = _value;
+            break;
+         }
+      }
+      return new Text(value);
+   }
+
+   public static void main(String[]args){
+
+   }
+}
+
+
+
+
+
+问答题：
+1.50亿个url，，每个64b，也就是一共大约320G，两个320G的文件进行比较，找重复行，内存限制是4G，也就是说大约可以分80个分区，将a文件和b文件每行url进行hash之后，跟80取模，会将a和b文件各自分成80个小文件，然后将a文件的0号分区读入内存，然后b文件0号分区每次读取一行找与a文件0号分区中hash值相同的，然后再将url取出之后比较url是否相同，相同就放到结果文件中，循环往复上述过程。
+
+
+选择题：
+1ACD
+2ABC
+3C
+
+
+select * from (select *, rank() over (partition by subject order by score desc ) as b from A) where b<=10select * from (select *, rank() over (partition by subject order by score desc ) as b from A) where b<=10
+
+
+
+
+sqlContext.udf.register("MyUDF",
+      (url: String, key: String) => {
+        val strippedUrl = url.stripPrefix("http://test.cn/images/o.gif?")
+        val keyValues: Array[String] = strippedUrl.split("&")
+        keyValues.find(_.startsWith(key)).get.split("=")(1)
+      })
+
+
+
+
+
+
+
+
+
+
+
+
